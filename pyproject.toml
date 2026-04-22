@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "thematic-analysis"
+version = "0.1.0"
+description = "Computer-assisted qualitative thematic analysis platform for interviews and community documents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# ── Core dependencies ─────────────────────────────────────────────────────────
+dependencies = [
+    # Persistence
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+
+    # Embeddings + vector store
+    "sentence-transformers>=3.0.0",
+    "chromadb>=0.5.0",
+
+    # Dashboard
+    "streamlit>=1.35.0",
+    "streamlit-extras>=0.4.0",
+
+    # Document parsing
+    "python-docx>=1.1.0",
+    "pdfplumber>=0.11.0",
+
+    # Settings
+    "pydantic-settings>=2.0.0",
+
+    # Utilities
+    "rich>=13.0.0",              # progress display in scripts
+    "tenacity>=8.0.0",           # retry logic for LLM calls
+    "python-slugify>=8.0.0",
+]
+
+[project.optional-dependencies]
+# Claude API (Tier 2 — synthesis)
+claude = [
+    "anthropic>=0.30.0",
+]
+# Ollama (Tier 1 — interactive, local)
+ollama = [
+    "ollama>=0.2.0",
+]
+# Full local stack
+local = [
+    "ollama>=0.2.0",
+]
+# Dev tools
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+# Everything
+all = [
+    "anthropic>=0.30.0",
+    "ollama>=0.2.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[project.scripts]
+thematic = "thematic.presentation.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=thematic --cov-report=term-missing -v"
+markers = [
+    "integration: requires real models or DB",
+    "llm: makes LLM API calls",
+]
