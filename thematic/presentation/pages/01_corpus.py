@@ -159,8 +159,8 @@ with tab_import:
             st.error("Please select or create a project and corpus first in the 'Projects' tab.")
         else:
             with st.spinner("Importing and computing embeddings…"):
-                # Save uploaded file to a temp path.
-                with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+                # Save uploaded file to a temp path with the expected extension.
+                with tempfile.NamedTemporaryFile(suffix=".transcript.json", delete=False) as tmp:
                     tmp.write(uploaded.getvalue())
                     tmp_path = Path(tmp.name)
 
@@ -199,7 +199,16 @@ with tab_import:
                     st.success(f"Imported **{source.title}**: {count} segments.")
                     st.balloons()
                     
-                    # 3. Cleanup temp file
+                    # 3. Show preview of first few segments
+                    segs = segment_repo.list_for_source(source.id)
+                    with st.expander("Preview first 5 segments"):
+                        for seg in segs[:5]:
+                            speaker_label = f"**{seg.speaker}**" if seg.speaker else ""
+                            time = f"`{seg.start_s:.0f}s`" if seg.start_s is not None else ""
+                            st.markdown(f"{speaker_label} {time}  \n{seg.text}")
+                            st.divider()
+
+                    # 4. Cleanup temp file
                     tmp_path.unlink()
                 except Exception as exc:
                     st.error(f"Import failed: {exc}")

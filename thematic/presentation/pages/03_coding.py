@@ -19,6 +19,8 @@ from thematic.infrastructure.db.repositories import (
     SqlSegmentRepository,
     SqlCodeRepository,
     SqlCodingDecisionRepository,
+    SqlAISuggestionRepository,
+    SqlModelRunRepository,
 )
 from thematic.application.coding import ApplyCodeUseCase, SuggestCodesUseCase
 
@@ -42,11 +44,12 @@ def _get_db():
     return factory() if factory else None
 
 
-def render_segment_card(seg, codes: list[str], session) -> None:
+def render_segment_card(seg, codes: list[Code], session) -> None:
     """Render one segment with its coding controls."""
     speaker = seg.speaker
     start = seg.start_s
     text = seg.text
+    code_labels = [c.label for c in codes]
 
     speaker_color = "#0F6E56" if speaker == "INTERVIEWEE" else "#534AB7"
     time_label = f"  {start:.0f}s" if start is not None else ""
@@ -61,27 +64,30 @@ def render_segment_card(seg, codes: list[str], session) -> None:
     col_codes, col_ai, col_memo = st.columns([2, 1, 1])
 
     with col_codes:
-        selected = st.multiselect(
+        selected_labels = st.multiselect(
             "Apply codes",
-            options=codes,
+            options=code_labels,
             key=f"codes_{seg.id}",
             label_visibility="collapsed",
             placeholder="Select codes to apply…",
         )
-        if selected and st.button("Apply", key=f"apply_{seg.id}"):
+        if selected_labels and st.button("Apply", key=f"apply_{seg.id}"):
             try:
                 apply_use_case = ApplyCodeUseCase(
                     SqlCodingDecisionRepository(session),
-                    SqlCodeRepository(session)
+                    SqlCodeRepository(session),
+                    SqlSegmentRepository(session),
                 )
-                for code_label in selected:
+                for label in selected_labels:
+                    # Find the code entity to get its ID
+                    code_entity = next(c for c in codes if c.label == label)
                     apply_use_case.execute(
                         segment_id=seg.id,
-                        code_label=code_label,
-                        analyst_id=st.session_state.get("analyst", "analyst")
+                        code_id=code_entity.id,
+                        analyst=st.session_state.get("analyst", "analyst")
                     )
                 session.commit()
-                st.success(f"Applied: {', '.join(selected)}")
+                st.success(f"Applied: {', '.join(selected_labels)}")
             except Exception as e:
                 st.error(f"Failed to apply codes: {e}")
 
@@ -95,12 +101,15 @@ def render_segment_card(seg, codes: list[str], session) -> None:
                     try:
                         suggest_use_case = SuggestCodesUseCase(
                             llm_service=llm,
-                            code_repo=SqlCodeRepository(session)
+                            code_repo=SqlCodeRepository(session),
+                            segment_repo=SqlSegmentRepository(session),
+                            suggestion_repo=SqlAISuggestionRepository(session),
+                            run_repo=SqlModelRunRepository(session),
                         )
                         suggestions = suggest_use_case.execute(
-                            segment_text=text,
+                            segment_id=seg.id,
                             project_id=st.session_state.get("active_project_id", ""),
-                            context=st.session_state.get("codebook_context", "")
+                            codebook_context=st.session_state.get("codebook_context", "")
                         )
                         st.session_state[f"suggestions_{seg.id}"] = suggestions
                     except Exception as exc:
@@ -117,26 +126,38 @@ def render_segment_card(seg, codes: list[str], session) -> None:
         for i, s in enumerate(suggestions):
             with st.container(border=True):
                 confidence = s.confidence
-                label = s.code_label
+                label = s.suggested_code_label
                 justification = s.justification
-                is_new = s.is_new_code
 
-                badge = " ✦ new code" if is_new else ""
                 st.markdown(
-                    f"**{label}**{badge} — confidence: {confidence:.0%}"
+                    f"**{label}** — confidence: {confidence:.0%}"
                 )
                 st.caption(justification)
                 col_a, col_r = st.columns(2)
                 with col_a:
                     if st.button("Accept", key=f"accept_{seg.id}_{i}"):
+                        # Find or create code if it's a new label
+                        code_repo = SqlCodeRepository(session)
+                        existing_code = code_repo.get_by_label(st.session_state["active_project_id"], label)
+                        
+                        if not existing_code:
+                            # Create new code from suggestion
+                            create_use_case = CreateCodeUseCase(code_repo)
+                            existing_code = create_use_case.execute(
+                                project_id=st.session_state["active_project_id"],
+                                label=label,
+                                definition=f"AI suggested: {justification}"
+                            )
+
                         apply_use_case = ApplyCodeUseCase(
                             SqlCodingDecisionRepository(session),
-                            SqlCodeRepository(session)
+                            SqlCodeRepository(session),
+                            SqlSegmentRepository(session),
                         )
                         apply_use_case.execute(
                             segment_id=seg.id,
-                            code_label=label,
-                            analyst_id=st.session_state.get("analyst", "analyst")
+                            code_id=existing_code.id,
+                            analyst=st.session_state.get("analyst", "analyst")
                         )
                         session.commit()
                         st.success(f"Accepted '{label}'.")
@@ -211,7 +232,6 @@ with st.sidebar:
 
 # Load real data
 codes = code_repo.list_for_project(active_project_id)
-code_labels = [c.label for c in codes]
 
 segments = segment_repo.list_for_source(active_source.id)
 if speaker_filter == "INTERVIEWEE only":
@@ -224,7 +244,7 @@ col_main, col_similar = st.columns([3, 1])
 with col_main:
     st.subheader(f"Segments ({len(visible)} shown)")
     for seg in visible:
-        render_segment_card(seg, code_labels, session)
+        render_segment_card(seg, codes, session)
 
 with col_similar:
     st.subheader("Similar segments")

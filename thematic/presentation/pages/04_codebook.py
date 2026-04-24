@@ -9,67 +9,55 @@ The codebook is versioned — every edit increments the version counter.
 from __future__ import annotations
 
 import streamlit as st
+from thematic.presentation.translations import t
+from thematic.infrastructure.db.repositories import SqlCodeRepository
+from thematic.application.coding import CreateCodeUseCase
 
-st.set_page_config(page_title="Codebook | Thematic Analysis", layout="wide")
+# ── Infrastructure ────────────────────────────────────────────────────────────
+def get_session():
+    factory = st.session_state.get("db_session_factory")
+    if factory is None:
+        st.error("Database not initialised. Please check app.py.")
+        st.stop()
+    return factory()
+
+st.set_page_config(page_title=f"{t('nav_codebook')} | {t('nav_title')}", layout="wide")
 
 st.title("Codebook")
 
 tab_codes, tab_categories, tab_themes = st.tabs(["Codes", "Categories", "Themes"])
 
-# ── Demo data ─────────────────────────────────────────────────────────────────
-demo_codes = [
-    {
-        "label": "exclusion_from_spaces",
-        "definition": "Participant describes being removed from or denied access to a physical community space.",
-        "inclusion_criteria": "Must reference a physical space. Must describe removal or denial.",
-        "exclusion_criteria": "Symbolic exclusion without a physical dimension.",
-        "usage_count": 7,
-        "version": 2,
-        "is_deprecated": False,
-    },
-    {
-        "label": "community_self_organization",
-        "definition": "Community members autonomously organise activities outside formal institutional structures.",
-        "inclusion_criteria": "Must be community-initiated. Must show collective action.",
-        "exclusion_criteria": "Institutionally directed activities.",
-        "usage_count": 5,
-        "version": 1,
-        "is_deprecated": False,
-    },
-    {
-        "label": "conditional_institutional_support",
-        "definition": "Institutional support provided only when the community adopts the institution's methodology.",
-        "inclusion_criteria": "Must reference an institution. Must include a condition or requirement.",
-        "exclusion_criteria": "Unconditional support.",
-        "usage_count": 3,
-        "version": 1,
-        "is_deprecated": False,
-    },
-]
+active_project_id = st.session_state.get("active_project_id")
+
+if not active_project_id:
+    st.warning("Please select a project first in the 'Corpus' page.")
+    st.stop()
+
+session = get_session()
+code_repo = SqlCodeRepository(session)
+all_codes = code_repo.list_for_project(active_project_id)
 
 # ── Codes tab ─────────────────────────────────────────────────────────────────
 with tab_codes:
     col_list, col_new = st.columns([2, 1])
 
     with col_list:
-        st.subheader(f"Codes ({len(demo_codes)})")
+        st.subheader(f"Codes ({len(all_codes)})")
 
         search = st.text_input("Filter codes", placeholder="Search…", label_visibility="collapsed")
-        filtered = [c for c in demo_codes if not search or search.lower() in c["label"].lower()]
+        filtered = [c for c in all_codes if not search or search.lower() in c.label.lower()]
 
-        for code in filtered:
-            with st.expander(f"**{code['label']}** · v{code['version']} · {code['usage_count']} usages"):
-                st.markdown(f"**Definition:** {code['definition']}")
-                st.markdown(f"**Inclusion:** {code['inclusion_criteria']}")
-                st.markdown(f"**Exclusion:** {code['exclusion_criteria']}")
+        if not filtered:
+            st.info("No codes found. Create one on the right →")
+        else:
+            for code in filtered:
+                with st.expander(f"**{code.label}** · v{code.version}"):
+                    st.markdown(f"**Definition:** {code.definition}")
+                    st.markdown(f"**Inclusion:** {code.inclusion_criteria}")
+                    st.markdown(f"**Exclusion:** {code.exclusion_criteria}")
 
-                col_edit, col_dep = st.columns(2)
-                with col_edit:
-                    if st.button("Edit", key=f"edit_{code['label']}"):
-                        st.session_state["editing_code"] = code["label"]
-                with col_dep:
-                    if st.button("Deprecate", key=f"dep_{code['label']}"):
-                        st.warning(f"'{code['label']}' marked as deprecated.")
+                    if st.button("Deprecate", key=f"dep_{code.id}"):
+                        st.info("Deprecation not implemented in DB yet.")
 
     with col_new:
         st.subheader("New code")
@@ -89,7 +77,22 @@ with tab_codes:
                 elif not definition.strip():
                     st.error("Definition is required.")
                 else:
-                    st.success(f"Code '{label}' created.")
+                    try:
+                        create_use_case = CreateCodeUseCase(code_repo)
+                        create_use_case.execute(
+                            project_id=active_project_id,
+                            label=label,
+                            definition=definition,
+                            inclusion_criteria=inclusion,
+                            exclusion_criteria=exclusion,
+                        )
+                        session.commit()
+                        st.success(f"Code '{label}' created.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to create code: {e}")
+    
+    session.close()
 
 # ── Categories tab ────────────────────────────────────────────────────────────
 with tab_categories:
