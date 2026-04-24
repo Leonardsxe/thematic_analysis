@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 import streamlit as st
+from thematic.presentation.translations import t
 
 # ─────────────────────────────────────────────
 #  Page configuration (must be first Streamlit call)
@@ -53,6 +54,7 @@ def _initialise_services() -> None:
         db_url: str = "sqlite:///./thematic.db"
         chroma_path: str = "./chroma_store"
         embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
+        embedding_device: str | None = None
         ollama_model: str = "mistral:7b"
         ollama_host: str = "http://localhost:11434"
         anthropic_api_key: str = ""
@@ -99,25 +101,31 @@ def _initialise_services() -> None:
 
 def _render_sidebar() -> None:
     with st.sidebar:
-        st.markdown("## Thematic Analysis")
-        st.caption("Computer-assisted qualitative research")
+        st.markdown(f"## {t('nav_title')}")
+        st.caption(t('nav_subtitle'))
+        
+        # Language Selector
         st.divider()
+        current_lang = st.session_state.get("language", "en")
+        lang_options = ["English", "Español"]
+        lang_idx = 0 if current_lang == "en" else 1
+        chosen_lang = st.selectbox(t("lang_label"), lang_options, index=lang_idx)
+        new_lang = "en" if chosen_lang == "English" else "es"
+        if new_lang != current_lang:
+            st.session_state["language"] = new_lang
+            st.rerun()
 
-        # Show current LLM tier
-        if st.session_state.get("llm_tier"):
-            st.caption(f"AI: {st.session_state['llm_tier']}")
-
         st.divider()
-        st.caption("Navigation")
-        st.page_link("pages/01_corpus.py", label="Corpus", icon="📂")
-        st.page_link("pages/02_immersion.py", label="Immersion", icon="📖")
-        st.page_link("pages/03_coding.py", label="Coding", icon="🏷️")
-        st.page_link("pages/04_codebook.py", label="Codebook", icon="📋")
-        st.page_link("pages/05_clusters.py", label="Clusters", icon="🔵")
-        st.page_link("pages/06_comparison.py", label="Comparison", icon="⚖️")
-        st.page_link("pages/07_export.py", label="Export", icon="📤")
+        st.caption(t('nav_header'))
+        st.page_link("pages/01_corpus.py", label=t('nav_corpus'), icon="📂")
+        st.page_link("pages/02_immersion.py", label=t('nav_immersion'), icon="📖")
+        st.page_link("pages/03_coding.py", label=t('nav_coding'), icon="🏷️")
+        st.page_link("pages/04_codebook.py", label=t('nav_codebook'), icon="📋")
+        st.page_link("pages/05_clusters.py", label=t('nav_clusters'), icon="🔵")
+        st.page_link("pages/06_comparison.py", label=t('nav_comparison'), icon="⚖️")
+        st.page_link("pages/07_export.py", label=t('nav_export'), icon="📤")
         st.divider()
-        st.caption("v0.1.0 — Research preview")
+        st.caption(t('version_tag'))
 
 
 # ─────────────────────────────────────────────
@@ -129,8 +137,8 @@ def main() -> None:
     _initialise_services()
     _render_sidebar()
 
-    st.title("Thematic Analysis Platform")
-    st.caption("Computer-assisted qualitative analysis for interviews and community documents")
+    st.title(t('main_title'))
+    st.caption(t('main_subtitle'))
 
     settings = st.session_state.get("settings")
     llm_tier = st.session_state.get("llm_tier", "not configured")
@@ -140,62 +148,43 @@ def main() -> None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("AI model", llm_tier if llm else "not ready")
+        st.metric(t('status_ai_model'), llm_tier if llm else "not ready")
 
     with col2:
         # Check Ollama availability
         if llm and hasattr(llm, "is_available"):
             available = llm.is_available()
-            st.metric("Ollama server", "online" if available else "offline")
+            st.metric(t('status_ollama'), t('status_online') if available else t('status_offline'))
         else:
             st.metric("Claude API", "configured" if settings and settings.anthropic_api_key else "no key")
 
     with col3:
         db_ready = st.session_state.get("db_session_factory") is not None
-        st.metric("Database", "ready" if db_ready else "error")
+        st.metric(t('status_database'), t('status_ready') if db_ready else t('status_error'))
 
     st.divider()
 
     # ── Quick start guide ──────────────────────────────────────────────────────
-    st.subheader("Quick start")
+    st.subheader(t('quick_start_title'))
 
-    with st.expander("1 — Import a transcript from the audio-transcriber", expanded=True):
-        st.write(
-            "Go to **Corpus → Import** and select a `.transcript.json` file "
-            "produced by the audio-transcriber project. The platform preserves "
-            "speaker labels, timestamps, and confidence scores."
-        )
+    with st.expander(t('qs_step_1_title'), expanded=True):
+        st.write(t('qs_step_1_body'))
 
-    with st.expander("2 — Read and familiarise yourself with the material"):
-        st.write(
-            "Open **Immersion** to read transcripts with audio playback. "
-            "Create free-form memos and highlight passages before formal coding begins."
-        )
+    with st.expander(t('qs_step_2_title')):
+        st.write(t('qs_step_2_body'))
 
-    with st.expander("3 — Code segments and build your codebook"):
-        st.write(
-            "In **Coding**, select any segment and apply codes manually. "
-            "Request AI suggestions at any time — all suggestions start as PENDING "
-            "and require your explicit approval."
-        )
+    with st.expander(t('qs_step_3_title')):
+        st.write(t('qs_step_3_body'))
 
-    with st.expander("4 — Explore clusters and validate themes"):
-        st.write(
-            "In **Clusters**, review semantic clusters generated from embeddings. "
-            "Label clusters, promote them to categories, and synthesise themes "
-            "with evidence-backed justification."
-        )
+    with st.expander(t('qs_step_4_title')):
+        st.write(t('qs_step_4_body'))
 
-    with st.expander("5 — Export your evidence matrix and codebook"):
-        st.write(
-            "In **Export**, download a versioned codebook, evidence matrix, "
-            "and audit trail suitable for academic research workflows."
-        )
+    with st.expander(t('qs_step_5_title')):
+        st.write(t('qs_step_5_body'))
 
     st.divider()
     st.info(
-        "All AI suggestions are advisory only. The platform never automatically "
-        "adopts a model output as a final finding. Every decision is yours.",
+        t('advisory_note'),
         icon="ℹ️",
     )
 

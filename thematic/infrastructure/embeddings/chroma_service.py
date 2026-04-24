@@ -65,10 +65,12 @@ class ChromaEmbeddingService:
         persist_path: Path | str = "./chroma_store",
         model_name: str = _DEFAULT_MODEL,
         project_id: str = "",
+        device: str | None = None,
     ) -> None:
         self._path = Path(persist_path)
         self._model_name = model_name
         self._project_id = project_id
+        self._device = device
         self._client = None
         self._collection = None
         self._model = None
@@ -218,6 +220,6 @@ class ChromaEmbeddingService:
                 "sentence-transformers is required for embeddings.\n"
                 "Install: pip install sentence-transformers"
             ) from exc
-        logger.info("Loading embedding model '%s' …", self._model_name)
-        self._model = SentenceTransformer(self._model_name)
+        logger.info("Loading embedding model '%s' on device '%s' …", self._model_name, self._device or "auto")
+        self._model = SentenceTransformer(self._model_name, device=self._device)
         return self._model

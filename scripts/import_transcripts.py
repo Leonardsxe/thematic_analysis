@@ -77,6 +77,7 @@ def main() -> None:
         db_url: str = "sqlite:///./thematic.db"
         chroma_path: str = "./chroma_store"
         embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
+        embedding_device: str | None = None
 
     settings = Settings()
     db_url = args.db_url or settings.db_url
@@ -105,8 +106,11 @@ def main() -> None:
     corpus_repo = SqlCorpusRepository(session)
     source_repo = SqlSourceRepository(session)
     segment_repo = SqlSegmentRepository(session)
-    embedder = ChromaEmbeddingService(persist_path=settings.chroma_path,
-                                       model_name=settings.embedding_model)
+    embedder = ChromaEmbeddingService(
+        persist_path=settings.chroma_path,
+        model_name=settings.embedding_model,
+        device=settings.embedding_device,
+    )
     importer = TranscriptJsonImporter(
         min_words=args.min_words,
         include_interviewer=args.include_all,

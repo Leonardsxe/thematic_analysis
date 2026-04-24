@@ -20,9 +20,14 @@ dependencies = [
     "sentence-transformers>=3.0.0",
     "chromadb>=0.5.0",
 
-    # Dashboard
+    # Analysis + UI
     "streamlit>=1.35.0",
     "streamlit-extras>=0.4.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.8.0",
+    "scikit-learn>=1.3.0",
+    "hdbscan>=0.8.33",
+    "numpy>=1.24.0",
 
     # Document parsing
     "python-docx>=1.1.0",
@@ -35,6 +40,7 @@ dependencies = [
     "rich>=13.0.0",              # progress display in scripts
     "tenacity>=8.0.0",           # retry logic for LLM calls
     "python-slugify>=8.0.0",
+    "ollama>=0.2.0",
 ]
 
 [project.optional-dependencies]
