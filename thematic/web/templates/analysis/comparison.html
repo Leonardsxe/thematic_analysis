@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Comparison" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>⚖️ {% trans "Cross-source comparison" %}</h1>
+  <p class="subtitle">
+    {% trans "Evidence matrix: each cell shows how many times a code appears in a source." %}
+  </p>
+</div>
+
+{% if not active_project_name %}
+  <div class="alert alert-warning">{% trans "No active project." %}</div>
+{% elif not codes %}
+  <div class="alert alert-info">
+    {% trans "No codes yet. Go to Coding to create codes and apply them to segments." %}
+    <a href="{% url 'coding:codebook' %}" class="btn btn-secondary btn-sm" style="margin-left:12px">
+      {% trans "Open Codebook" %} →
+    </a>
+  </div>
+{% elif not sources %}
+  <div class="alert alert-info">
+    {% trans "No sources in the active corpus. Import transcripts or documents first." %}
+  </div>
+{% else %}
+
+  {# Filter bar #}
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">
+    <div class="form-group" style="margin:0">
+      <label>{% trans "Speaker filter" %}</label>
+      <select id="speaker-filter" onchange="applyFilters()">
+        <option value="ALL"
+          {% if speaker_filter == "ALL" %}selected{% endif %}>
+          {% trans "All speakers" %}
+        </option>
+        <option value="INTERVIEWEE"
+          {% if speaker_filter == "INTERVIEWEE" %}selected{% endif %}>
+          INTERVIEWEE
+        </option>
+        <option value="INTERVIEWER"
+          {% if speaker_filter == "INTERVIEWER" %}selected{% endif %}>
+          INTERVIEWER
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin:0">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
+        <input type="checkbox" id="hide-empty" onchange="applyFilters()"
+               style="width:auto" {% if hide_empty %}checked{% endif %}>
+        {% trans "Hide codes with no evidence" %}
+      </label>
+    </div>
+
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a href="{% url 'export:matrix' %}" class="btn btn-secondary btn-sm">
+        ⬇️ {% trans "Export CSV" %}
+      </a>
+    </div>
+  </div>
+
+  {# Summary metrics #}
+  <div class="metrics-row" style="margin-bottom:24px">
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Codes" %}</div>
+      <div class="metric-value">{{ codes|length }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Sources" %}</div>
+      <div class="metric-value">{{ sources|length }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Coded segments" %}</div>
+      <div class="metric-value ok">{{ total_decisions }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{% trans "AI-assisted" %}</div>
+      <div class="metric-value">{{ ai_decisions }}</div>
+    </div>
+  </div>
+
+  {# Evidence matrix table #}
+  <div style="overflow-x:auto">
+    <table id="matrix-table"
+           style="width:100%;border-collapse:collapse;font-size:12px">
+
+      {# Header row — one column per source #}
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:8px 12px;background:var(--bg-elevated);
+                     border:1px solid var(--border);min-width:180px;position:sticky;left:0;z-index:1">
+            {% trans "Code" %}
+          </th>
+          {% for src in sources %}
+            <th style="text-align:center;padding:6px 8px;background:var(--bg-elevated);
+                       border:1px solid var(--border);min-width:120px;
+                       max-width:160px;word-break:break-word">
+              <div style="font-weight:600">
+                {{ src.title|default:src.id|truncatechars:30 }}
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);font-weight:normal">
+                {{ src.source_type }}
+              </div>
+            </th>
+          {% endfor %}
+          <th style="text-align:center;padding:6px 8px;background:var(--bg-elevated);
+                     border:1px solid var(--border);min-width:60px">
+            {% trans "Total" %}
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in matrix_rows %}
+        <tr class="matrix-row {% if row.total == 0 %}empty-row{% endif %}"
+            data-total="{{ row.total }}">
+
+          {# Code label — sticky left column #}
+          <td style="padding:8px 12px;border:1px solid var(--border);
+                     background:var(--bg-surface);position:sticky;left:0;z-index:1">
+            <span class="code-chip">{{ row.code_label }}</span>
+            {% if row.definition %}
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px">
+                {{ row.definition|truncatechars:50 }}
+              </div>
+            {% endif %}
+          </td>
+
+          {# One cell per source #}
+          {% for cell in row.cells %}
+            <td style="text-align:center;padding:6px 8px;border:1px solid var(--border);
+                       background:{% if cell.count > 0 %}rgba(15,110,86,{{ cell.intensity }}){% else %}var(--bg-page){% endif %};
+                       cursor:{% if cell.count > 0 %}pointer{% else %}default{% endif %}"
+                {% if cell.count > 0 %}
+                  onclick="showExcerpts('{{ row.code_id }}', '{{ cell.source_id }}', '{{ row.code_label|escapejs }}', '{{ cell.source_title|escapejs }}')"
+                  title="{{ cell.count }} {% trans 'decision(s) — click to view excerpts' %}"
+                {% endif %}>
+              {% if cell.count > 0 %}
+                <strong style="color:var(--text)">{{ cell.count }}</strong>
+                {% if cell.ai_count > 0 %}
+                  <span style="font-size:9px;color:var(--text-muted);display:block">
+                    ({{ cell.ai_count }} AI)
+                  </span>
+                {% endif %}
+              {% else %}
+                <span style="color:var(--text-disabled)">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+
+          {# Row total #}
+          <td style="text-align:center;padding:6px 8px;border:1px solid var(--border);
+                     background:var(--bg-surface);font-weight:600">
+            {% if row.total > 0 %}{{ row.total }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+
+  {# Excerpts modal #}
+  <div id="excerpts-modal" style="display:none;position:fixed;inset:0;z-index:999;
+                                  background:rgba(0,0,0,0.7);padding:40px 20px;
+                                  overflow-y:auto">
+    <div style="max-width:700px;margin:0 auto;background:var(--bg-elevated);
+                border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 id="modal-title" style="font-size:15px"></h3>
+        <button onclick="document.getElementById('excerpts-modal').style.display='none'"
+                class="btn btn-ghost btn-sm">✕ {% trans "Close" %}</button>
+      </div>
+      <div id="modal-content">
+        <div class="spinner" style="display:block;margin:20px auto"></div>
+      </div>
+    </div>
+  </div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyFilters() {
+  const speaker = document.getElementById('speaker-filter').value;
+  const hideEmpty = document.getElementById('hide-empty').checked;
+  const url = new URL(window.location);
+  url.searchParams.set('speaker', speaker);
+  url.searchParams.set('hide_empty', hideEmpty ? '1' : '0');
+  window.location = url;
+}
+
+async function showExcerpts(codeId, sourceId, codeLabel, sourceTitle) {
+  const modal = document.getElementById('excerpts-modal');
+  const title = document.getElementById('modal-title');
+  const content = document.getElementById('modal-content');
+
+  title.textContent = `${codeLabel} — ${sourceTitle}`;
+  content.innerHTML = '<div class="spinner" style="display:block;margin:20px auto"></div>';
+  modal.style.display = 'block';
+
+  try {
+    const data = await api('GET',
+      `/api/coding/excerpts/?code_id=${encodeURIComponent(codeId)}&source_id=${encodeURIComponent(sourceId)}`
+    );
+    if (!data.ok || !data.excerpts.length) {
+      content.innerHTML = '<p style="color:var(--text-muted)">No excerpts found.</p>';
+      return;
+    }
+    content.innerHTML = data.excerpts.map(e => `
+      <div style="margin-bottom:16px;padding:12px;background:var(--bg-surface);
+                  border-left:3px solid var(--color-interviewee);border-radius:0 6px 6px 0">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">
+          <span class="speaker-badge ${e.speaker.toLowerCase()}">${e.speaker}</span>
+          ${e.start_s != null ? `<span style="margin-left:8px">${e.start_s.toFixed(1)}s</span>` : ''}
+          ${e.is_ai ? '<span style="margin-left:8px;color:var(--color-pending)">(AI)</span>' : ''}
+        </div>
+        <div style="font-size:13px;line-height:1.7">${e.text}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    content.innerHTML = `<p style="color:var(--danger)">${err.message}</p>`;
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('excerpts-modal')?.addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

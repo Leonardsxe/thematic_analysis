@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Sources" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📂 {% trans "Sources" %}</h1>
+  <p class="subtitle">
+    {% trans "All imported sources in the active corpus. Click a source to preview its segments." %}
+  </p>
+</div>
+
+{% if not active_corpus_name %}
+  <div class="alert alert-warning">
+    {% trans "No active corpus. Go to Corpus and activate one." %}
+    <a href="{% url 'corpus:index' %}" class="btn btn-secondary btn-sm" style="margin-left:12px">
+      {% trans "Go to Corpus" %} →
+    </a>
+  </div>
+
+{% elif not sources %}
+  <div class="alert alert-info">
+    {% trans "No sources imported yet." %}
+    <a href="{% url 'corpus:index' %}" class="btn btn-secondary btn-sm" style="margin-left:12px">
+      {% trans "Import a transcript" %} →
+    </a>
+  </div>
+
+{% else %}
+
+  {# Summary bar #}
+  <div class="metrics-row" style="margin-bottom:24px">
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Sources" %}</div>
+      <div class="metric-value ok">{{ sources|length }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Total segments" %}</div>
+      <div class="metric-value">{{ total_segments }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{% trans "Total words" %}</div>
+      <div class="metric-value">{{ total_words }}</div>
+    </div>
+  </div>
+
+  {# Source list with expandable segment previews #}
+  {% for item in sources %}
+    {% with src=item.source segs=item.segments %}
+    <div class="expander {% if forloop.first %}open{% endif %}"
+         id="source-{{ src.id }}">
+
+      <div class="expander-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:18px">
+            {% if src.source_type == "transcript" %}🎙️
+            {% elif src.source_type == "document" %}📄
+            {% else %}📝{% endif %}
+          </span>
+          <div>
+            <div style="font-weight:600;color:var(--text)">
+              {{ src.title|default:src.id }}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              {{ src.source_type }} ·
+              {{ item.segment_count }} {% trans "segments" %} ·
+              {{ item.word_count }} {% trans "words" %}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <a href="{% url 'analysis:immersion' %}?source={{ src.id }}"
+             class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
+            📖 {% trans "Read" %}
+          </a>
+          <a href="{% url 'coding:index' %}?source={{ src.id }}"
+             class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
+            🏷️ {% trans "Code" %}
+          </a>
+          <span class="expander-arrow">▼</span>
+        </div>
+      </div>
+
+      <div class="expander-content">
+        {# Speaker breakdown #}
+        {% if item.speaker_counts %}
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            {% for speaker, count in item.speaker_counts.items %}
+              <span class="speaker-badge {{ speaker|lower }}" style="padding:4px 10px">
+                {{ speaker }}: {{ count }}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {# First N segments as preview #}
+        {% for seg in segs|slice:":5" %}
+          <div style="display:flex;gap:12px;margin-bottom:12px">
+            <div style="flex:0 0 48px;text-align:right;padding-top:4px">
+              <span class="speaker-badge {{ seg.speaker|lower|default:'unknown' }}"
+                    style="font-size:10px;padding:1px 4px">
+                {{ seg.speaker|default:"?"|slice:":1" }}
+              </span>
+              {% if seg.start_s is not None %}
+                <div style="font-size:9px;color:var(--text-disabled);margin-top:2px">
+                  {{ seg.start_s|floatformat:0 }}s
+                </div>
+              {% endif %}
+            </div>
+            <div style="flex:1;font-size:13px;line-height:1.6;color:var(--text-muted);
+                        border-left:2px solid
+                          {% if seg.speaker == 'INTERVIEWEE' %}var(--color-interviewee)
+                          {% elif seg.speaker == 'INTERVIEWER' %}var(--color-interviewer)
+                          {% else %}var(--border){% endif %};
+                        padding-left:10px">
+              {{ seg.text|truncatechars:250 }}
+            </div>
+          </div>
+        {% endfor %}
+
+        {% if item.segment_count > 5 %}
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
+            {% blocktrans with remaining=item.segment_count|add:"-5" %}
+              … and {{ remaining }} more segments. Open Immersion or Coding to read all.
+            {% endblocktrans %}
+          </div>
+        {% endif %}
+
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <a href="{% url 'analysis:immersion' %}?source={{ src.id }}"
+             class="btn btn-secondary btn-sm">
+            📖 {% trans "Open in Immersion" %}
+          </a>
+          <a href="{% url 'coding:index' %}?source={{ src.id }}"
+             class="btn btn-secondary btn-sm">
+            🏷️ {% trans "Open in Coding" %}
+          </a>
+        </div>
+      </div>
+
+    </div>
+    {% endwith %}
+  {% endfor %}
+
+{% endif %}
+{% endblock %}

@@ -1,0 +1,139 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% trans "Thematic Analysis" %}{% endblock %} | {% trans "Thematic Analysis Platform" %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{# Hidden form used by base.js to submit language switch #}
+<form id="lang-form" method="post" action="{% url 'set_language' %}" style="display:none">
+  {% csrf_token %}
+  <input type="hidden" name="language" value="">
+  <input type="hidden" name="next" value="">
+</form>
+
+<div class="shell">
+
+  {# ── Sidebar ────────────────────────────────────────────────────── #}
+  <nav class="sidebar" aria-label="{% trans 'Main navigation' %}">
+
+    <div class="sidebar-brand">
+      <h2>📊 {% trans "Thematic Analysis" %}</h2>
+      {% if active_project_name %}
+        <p>{{ active_project_name }}</p>
+      {% else %}
+        <p style="color:var(--warning)">{% trans "No project selected" %}</p>
+      {% endif %}
+    </div>
+
+    {% if active_project_name %}
+    <div class="active-project-badge">
+      <div class="badge-label">{% trans "Project" %}</div>
+      <div class="badge-value">{{ active_project_name }}</div>
+      {% if active_corpus_name %}
+        <div class="badge-label" style="margin-top:6px">{% trans "Corpus" %}</div>
+        <div class="badge-value">{{ active_corpus_name }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <hr>
+
+    <span class="sidebar-section-label">{% trans "Workspace" %}</span>
+
+    <a href="{% url 'dashboard' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <span class="icon">🏠</span> {% trans "Dashboard" %}
+    </a>
+
+    <a href="{% url 'corpus:index' %}"
+       class="nav-link {% if 'corpus' in request.resolver_match.app_names %}active{% endif %}">
+      <span class="icon">📁</span> {% trans "Corpus" %}
+    </a>
+
+    <a href="{% url 'analysis:immersion' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'immersion' %}active{% endif %}">
+      <span class="icon">📖</span> {% trans "Immersion" %}
+    </a>
+
+    <a href="{% url 'coding:index' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'index' and 'coding' in request.resolver_match.app_names %}active{% endif %}">
+      <span class="icon">🏷️</span> {% trans "Coding" %}
+    </a>
+
+    <a href="{% url 'coding:codebook' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'codebook' %}active{% endif %}">
+      <span class="icon">📚</span> {% trans "Codebook" %}
+    </a>
+
+    <hr>
+
+    <span class="sidebar-section-label">{% trans "Analysis" %}</span>
+
+    <a href="{% url 'analysis:clusters' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'clusters' %}active{% endif %}">
+      <span class="icon">🔮</span> {% trans "Clusters" %}
+    </a>
+
+    <a href="{% url 'analysis:comparison' %}"
+       class="nav-link {% if request.resolver_match.url_name == 'comparison' %}active{% endif %}">
+      <span class="icon">⚖️</span> {% trans "Comparison" %}
+    </a>
+
+    <a href="{% url 'export:index' %}"
+       class="nav-link {% if 'export' in request.resolver_match.app_names %}active{% endif %}">
+      <span class="icon">📤</span> {% trans "Export" %}
+    </a>
+
+    <hr>
+
+    {# System status #}
+    <div style="font-size:11px;color:var(--text-muted);padding:0 8px">
+      <div>
+        <span class="status-dot {% if db_ready %}ok{% else %}err{% endif %}"></span>
+        {% trans "Database" %}
+      </div>
+      <div style="margin-top:4px">
+        <span class="status-dot {% if llm_ready %}ok{% else %}warn{% endif %}"></span>
+        {% if llm_ready %}{{ llm_tier }}{% else %}{% trans "No LLM" %}{% endif %}
+      </div>
+    </div>
+
+    {# Language toggle #}
+    <div class="lang-toggle">
+      <button class="lang-btn {% if LANGUAGE_CODE == 'en' %}active{% endif %}"
+              data-lang="en" type="button">🇺🇸 EN</button>
+      <button class="lang-btn {% if LANGUAGE_CODE == 'es' %}active{% endif %}"
+              data-lang="es" type="button">🇨🇴 ES</button>
+    </div>
+
+    <div class="sidebar-version">v0.2 · Django</div>
+
+  </nav>
+
+  {# ── Main ───────────────────────────────────────────────────────── #}
+  <main class="main-content" id="main-content">
+
+    {# Django messages (flash) #}
+    {% if messages %}
+      {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}" data-auto-dismiss>{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+
+</div>{# .shell #}
+
+<script src="{% static 'js/base.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

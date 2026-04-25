@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Codebook" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📚 {% trans "Codebook" %}</h1>
+  <p class="subtitle">{% trans "Define and manage your analytical codes" %}</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
+
+  {# Code list ─────────────────────────────────────────────────────────────── #}
+  <div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+      {{ codes|length }} {% trans "code(s) in this project" %}
+    </div>
+
+    {% if codes %}
+      {% for code in codes %}
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="code-chip" style="font-size:13px;padding:4px 10px">{{ code.label }}</span>
+            <span style="font-size:11px;color:var(--text-muted)">{{ code.id|slice:":8" }}</span>
+          </div>
+          {% if code.definition %}
+            <p style="font-size:13px;color:var(--text-muted);line-height:1.5">
+              {{ code.definition }}
+            </p>
+          {% else %}
+            <p style="font-size:12px;color:var(--text-disabled);font-style:italic">
+              {% trans "No definition" %}
+            </p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">
+        {% trans "No codes yet. Create your first code using the form." %}
+      </div>
+    {% endif %}
+  </div>
+
+  {# Create code form ──────────────────────────────────────────────────────── #}
+  <div style="position:sticky;top:24px">
+    <div class="card">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">
+        {% trans "New code" %}
+      </h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="label">{% trans "Label" %}</label>
+          <input type="text" id="label" name="label"
+                 placeholder="{% trans 'e.g. exclusion_from_spaces' %}" required>
+        </div>
+        <div class="form-group">
+          <label for="definition">{% trans "Definition" %}</label>
+          <textarea id="definition" name="definition" rows="4"
+                    placeholder="{% trans 'When to apply this code…' %}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          {% trans "Create code" %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -36,6 +36,10 @@ dependencies = [
     # Settings
     "pydantic-settings>=2.0.0",
 
+    # Web (Django — replaces Streamlit)
+    "django>=5.0",
+    "whitenoise>=6.7.0",
+
     # Utilities
     "rich>=13.0.0",              # progress display in scripts
     "tenacity>=8.0.0",           # retry logic for LLM calls
@@ -77,6 +81,7 @@ all = [
 
 [project.scripts]
 thematic = "thematic.presentation.app:main"
+thematic-web = "thematic.web.manage:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

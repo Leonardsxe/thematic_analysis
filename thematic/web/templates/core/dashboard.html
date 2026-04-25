@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% trans "Thematic Analysis Platform" %}</h1>
+  <p class="subtitle">
+    {% trans "Qualitative research toolkit for prácticas pedagógicas comunitarias" %}
+  </p>
+</div>
+
+{# ── System status metrics ─────────────────────────────────────────────────── #}
+<div class="metrics-row">
+  <div class="metric-card">
+    <div class="metric-label">{% trans "Database" %}</div>
+    <div class="metric-value {% if db_ready %}ok{% else %}error{% endif %}">
+      {% if db_ready %}{% trans "Ready" %}{% else %}{% trans "Error" %}{% endif %}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-label">{% trans "LLM" %}</div>
+    <div class="metric-value {% if llm_ready %}ok{% else %}warn{% endif %}">
+      {% if llm_ready %}{% trans "Ready" %}{% else %}{% trans "Offline" %}{% endif %}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-label">{% trans "Active project" %}</div>
+    <div class="metric-value {% if active_project_name %}ok{% else %}warn{% endif %}">
+      {% if active_project_name %}{{ active_project_name }}{% else %}—{% endif %}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-label">{% trans "Analyst" %}</div>
+    <div class="metric-value">{{ analyst }}</div>
+  </div>
+</div>
+
+{% if not active_project_name %}
+<div class="alert alert-warning">
+  {% trans "No project selected. Go to Corpus to create or activate a project." %}
+  <a href="{% url 'corpus:index' %}" class="btn btn-secondary btn-sm" style="margin-left:12px">
+    {% trans "Go to Corpus" %} →
+  </a>
+</div>
+{% endif %}
+
+{# ── Workflow guide ────────────────────────────────────────────────────────── #}
+<div class="card">
+  <h3 style="margin-bottom:16px;font-size:15px;color:var(--text-muted)">
+    {% trans "Research workflow" %}
+  </h3>
+
+  {% with steps="1,2,3,4,5,6" %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+
+    <a href="{% url 'corpus:index' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">📁</div>
+        <div style="font-weight:600;margin-bottom:4px">1. {% trans "Corpus" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Create projects, import transcripts and documents" %}
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'analysis:immersion' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">📖</div>
+        <div style="font-weight:600;margin-bottom:4px">2. {% trans "Immersion" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Read sources and write analytical memos" %}
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'coding:index' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">🏷️</div>
+        <div style="font-weight:600;margin-bottom:4px">3. {% trans "Coding" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Apply codes to segments, use AI suggestions" %}
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'analysis:clusters' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">🔮</div>
+        <div style="font-weight:600;margin-bottom:4px">4. {% trans "Clusters" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Discover semantic clusters, propose themes" %}
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'analysis:comparison' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">⚖️</div>
+        <div style="font-weight:600;margin-bottom:4px">5. {% trans "Comparison" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Cross-source evidence matrix" %}
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'export:index' %}" style="text-decoration:none">
+      <div class="card" style="cursor:pointer;transition:border-color 0.15s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:24px;margin-bottom:8px">📤</div>
+        <div style="font-weight:600;margin-bottom:4px">6. {% trans "Export" %}</div>
+        <div style="font-size:12px;color:var(--text-muted)">
+          {% trans "Evidence matrix, codebook, audit trail" %}
+        </div>
+      </div>
+    </a>
+
+  </div>
+  {% endwith %}
+</div>
+
+{% if llm_ready %}
+<div class="alert alert-info" style="margin-top:16px">
+  <strong>{% trans "LLM" %}:</strong> {{ llm_tier }}
+</div>
+{% else %}
+<div class="alert alert-warning" style="margin-top:16px">
+  {% trans "No LLM adapter is ready. AI suggestions will not be available. Check Ollama or set ANTHROPIC_API_KEY in .env" %}
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Export" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📤 {% trans "Export centre" %}</h1>
+  <p class="subtitle">
+    {% trans "Download research artefacts with full provenance (source, analyst, timestamp)." %}
+  </p>
+</div>
+
+<div class="metrics-row">
+  <div class="metric-card">
+    <div class="metric-label">{% trans "Codes" %}</div>
+    <div class="metric-value">{{ code_count }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">{% trans "Sources" %}</div>
+    <div class="metric-value">{{ sources|length }}</div>
+  </div>
+</div>
+
+{# Tabs #}
+<div class="tabs">
+  <button class="tab-btn active">{% trans "Evidence matrix" %}</button>
+  <button class="tab-btn">{% trans "Codebook" %}</button>
+  <button class="tab-btn">{% trans "Audit trail" %}</button>
+</div>
+
+{# Evidence matrix #}
+<div class="tab-panel active">
+  <div class="card" style="max-width:600px">
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">
+      {% trans "Evidence matrix" %}
+    </h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      {% trans "Cross-references codes against sources. Each cell contains the excerpts where a code appears in a source." %}
+    </p>
+    <div class="form-group">
+      <label>{% trans "Format" %}</label>
+      <select id="matrix-format">
+        <option value="csv">CSV</option>
+        <option value="xlsx">Excel (.xlsx)</option>
+      </select>
+    </div>
+    <a href="{% url 'export:matrix' %}" class="btn btn-primary">
+      ⬇️ {% trans "Download evidence matrix" %}
+    </a>
+  </div>
+</div>
+
+{# Codebook #}
+<div class="tab-panel">
+  <div class="card" style="max-width:600px">
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">
+      {% trans "Codebook" %}
+    </h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      {% trans "Full codebook with labels, definitions, and relationships." %}
+    </p>
+    {% if codes %}
+      <div style="margin-bottom:16px;max-height:200px;overflow-y:auto">
+        {% for code in codes %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="code-chip">{{ code.label }}</span>
+            <span style="font-size:11px;color:var(--text-muted)">
+              {{ code.definition|default:"—"|truncatechars:50 }}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <a href="{% url 'export:codebook' %}" class="btn btn-primary">
+      ⬇️ {% trans "Download codebook (JSON)" %}
+    </a>
+  </div>
+</div>
+
+{# Audit trail #}
+<div class="tab-panel">
+  <div class="card" style="max-width:600px">
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">
+      {% trans "Audit trail" %}
+    </h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+      {% trans "Every coding decision with analyst, model run, and timestamp. Required for methodological rigour." %}
+    </p>
+    <a href="{% url 'export:audit' %}" class="btn btn-primary">
+      ⬇️ {% trans "Download audit trail (JSON)" %}
+    </a>
+  </div>
+</div>
+
+{% endblock %}

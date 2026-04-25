@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Clusters" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🔮 {% trans "Cluster explorer" %}</h1>
+  <p class="subtitle">
+    {% trans "Semantic clusters group segments by meaning. Review, label, and promote to themes." %}
+  </p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 220px;gap:24px;align-items:start">
+
+  {# Cluster list #}
+  <div>
+    {% if clusters %}
+      {% for cluster in clusters %}
+        {% if not cluster.is_reviewed or show_reviewed %}
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <span style="font-size:20px">🗂️</span>
+            <div style="flex:1">
+              <div style="font-weight:600">{{ cluster.label|default:"Unlabelled cluster" }}</div>
+              <div style="font-size:11px;color:var(--text-muted)">
+                {{ cluster.size }} {% trans "segments" %} ·
+                {% trans "Coherence:" %} {{ cluster.coherence|floatformat:2 }}
+                {% if cluster.is_reviewed %}
+                  · <span style="color:var(--success)">✓ {% trans "Reviewed" %}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if cluster.excerpts %}
+            <div class="expander open">
+              <div class="expander-header">
+                {% trans "Excerpts" %} <span class="expander-arrow">▼</span>
+              </div>
+              <div class="expander-content" style="display:block">
+                {% for excerpt in cluster.excerpts|slice:":3" %}
+                  <div style="font-size:13px;padding:8px;background:var(--bg-page);
+                               border-left:2px solid var(--color-interviewee);
+                               border-radius:0 4px 4px 0;margin-bottom:6px">
+                    {{ excerpt }}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-info">
+        {% trans "No clusters yet. Run clustering using the panel on the right." %}
+      </div>
+    {% endif %}
+  </div>
+
+  {# Run clustering panel #}
+  <div style="position:sticky;top:24px">
+    <div class="card">
+      <h3 style="font-size:13px;font-weight:600;margin-bottom:16px">
+        {% trans "Run clustering" %}
+      </h3>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="min_cluster_size">{% trans "Min cluster size" %}</label>
+          <input type="number" id="min_cluster_size" name="min_cluster_size"
+                 value="5" min="3" max="20">
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
+            <input type="checkbox" name="request_labels" checked style="width:auto">
+            {% trans "Request AI labels" %}
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          {% trans "Run clustering" %}
+        </button>
+      </form>
+      <hr class="divider">
+      <div style="font-size:11px;color:var(--text-muted)">
+        {% trans "Segments must be embedded first. Run corpus import with embeddings enabled." %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px">
+        <input type="checkbox" id="show-reviewed"
+               {% if show_reviewed %}checked{% endif %}
+               onchange="
+                 const url = new URL(window.location);
+                 url.searchParams.set('show_reviewed', this.checked ? '1' : '0');
+                 window.location = url;
+               "
+               style="width:auto">
+        {% trans "Show reviewed clusters" %}
+      </label>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

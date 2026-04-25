@@ -1,0 +1,357 @@
+# Traducciones al español
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es\n"
+
+msgid "Thematic Analysis"
+msgstr "Análisis Temático"
+
+msgid "Thematic Analysis Platform"
+msgstr "Plataforma de Análisis Temático"
+
+msgid "Qualitative research toolkit for prácticas pedagógicas comunitarias"
+msgstr "Herramienta de investigación cualitativa para prácticas pedagógicas comunitarias"
+
+msgid "Dashboard"
+msgstr "Inicio"
+
+msgid "Corpus"
+msgstr "Corpus"
+
+msgid "Immersion"
+msgstr "Inmersión"
+
+msgid "Coding"
+msgstr "Codificación"
+
+msgid "Codebook"
+msgstr "Libro de códigos"
+
+msgid "Clusters"
+msgstr "Clústeres"
+
+msgid "Comparison"
+msgstr "Comparación"
+
+msgid "Export"
+msgstr "Exportar"
+
+msgid "No project selected"
+msgstr "Ningún proyecto seleccionado"
+
+msgid "Project"
+msgstr "Proyecto"
+
+msgid "Corpus management"
+msgstr "Gestión del corpus"
+
+msgid "Create projects, import sources, and manage corpora"
+msgstr "Crea proyectos, importa fuentes y gestiona los corpus"
+
+msgid "New project"
+msgstr "Nuevo proyecto"
+
+msgid "Project name"
+msgstr "Nombre del proyecto"
+
+msgid "Research question"
+msgstr "Pregunta de investigación"
+
+msgid "optional"
+msgstr "opcional"
+
+msgid "What question guides this analysis?"
+msgstr "¿Qué pregunta orienta este análisis?"
+
+msgid "Create project"
+msgstr "Crear proyecto"
+
+msgid "New corpus"
+msgstr "Nuevo corpus"
+
+msgid "Adding to:"
+msgstr "Agregando a:"
+
+msgid "Corpus name"
+msgstr "Nombre del corpus"
+
+msgid "Create corpus"
+msgstr "Crear corpus"
+
+msgid "Select a project first."
+msgstr "Selecciona primero un proyecto."
+
+msgid "Your projects"
+msgstr "Tus proyectos"
+
+msgid "Active"
+msgstr "Activo"
+
+msgid "Activate"
+msgstr "Activar"
+
+msgid "Use"
+msgstr "Usar"
+
+msgid "No projects yet. Create one above."
+msgstr "Aún no hay proyectos. Crea uno arriba."
+
+msgid "Projects"
+msgstr "Proyectos"
+
+msgid "Import"
+msgstr "Importar"
+
+msgid "Sources"
+msgstr "Fuentes"
+
+msgid "You need an active project and corpus before importing. Use the Projects tab."
+msgstr "Necesitas un proyecto y corpus activo antes de importar. Usa la pestaña Proyectos."
+
+msgid "Import transcript or document"
+msgstr "Importar transcripción o documento"
+
+msgid "Drop file here or click to browse"
+msgstr "Suelta el archivo aquí o haz clic para explorar"
+
+msgid "Supported:"
+msgstr "Formatos:"
+
+msgid "View imported sources"
+msgstr "Ver fuentes importadas"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "Switch to the Sources page for full segment preview."
+msgstr "Ve a la página de Fuentes para ver los segmentos completos."
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Coding workspace"
+msgstr "Espacio de codificación"
+
+msgid "Apply codes to segments. Use AI suggestions or code manually."
+msgstr "Aplica códigos a los segmentos. Usa sugerencias de IA o codifica manualmente."
+
+msgid "Source"
+msgstr "Fuente"
+
+msgid "Speaker"
+msgstr "Hablante"
+
+msgid "All speakers"
+msgstr "Todos los hablantes"
+
+msgid "Interviewee only"
+msgstr "Solo persona entrevistada"
+
+msgid "segments"
+msgstr "segmentos"
+
+msgid "AI suggest"
+msgstr "✨ Sugerir con IA"
+
+msgid "Similar"
+msgstr "Similares"
+
+msgid "Apply"
+msgstr "Aplicar"
+
+msgid "Similar segments"
+msgstr "Segmentos similares"
+
+msgid "Manage codebook"
+msgstr "Gestionar libro de códigos"
+
+msgid "No codes yet."
+msgstr "Aún no hay códigos."
+
+msgid "Add codes"
+msgstr "Agregar códigos"
+
+msgid "No segments found for this source and filter."
+msgstr "No se encontraron segmentos para esta fuente y filtro."
+
+msgid "Immersion reader"
+msgstr "Lector de inmersión"
+
+msgid "Read your sources in full. Write analytical memos as you go."
+msgstr "Lee tus fuentes completas. Escribe memos analíticos mientras avanzas."
+
+msgid "No segments to display. Import a transcript or document first."
+msgstr "No hay segmentos que mostrar. Importa una transcripción o documento primero."
+
+msgid "Go to Corpus"
+msgstr "Ir al Corpus"
+
+msgid "Cluster explorer"
+msgstr "Explorador de clústeres"
+
+msgid "Semantic clusters group segments by meaning. Review, label, and promote to themes."
+msgstr "Los clústeres semánticos agrupan segmentos por significado. Revisa, etiqueta y promueve a temas."
+
+msgid "No clusters yet. Run clustering using the panel on the right."
+msgstr "Aún no hay clústeres. Ejecuta el agrupamiento desde el panel derecho."
+
+msgid "Run clustering"
+msgstr "Ejecutar agrupamiento"
+
+msgid "Min cluster size"
+msgstr "Tamaño mínimo del clúster"
+
+msgid "Request AI labels"
+msgstr "Solicitar etiquetas con IA"
+
+msgid "Segments must be embedded first. Run corpus import with embeddings enabled."
+msgstr "Los segmentos deben estar embebidos primero. Importa el corpus con embeddings activados."
+
+msgid "Show reviewed clusters"
+msgstr "Mostrar clústeres revisados"
+
+msgid "Export centre"
+msgstr "Centro de exportación"
+
+msgid "Download research artefacts with full provenance (source, analyst, timestamp)."
+msgstr "Descarga artefactos de investigación con procedencia completa (fuente, analista, fecha)."
+
+msgid "Codes"
+msgstr "Códigos"
+
+msgid "Evidence matrix"
+msgstr "Matriz de evidencia"
+
+msgid "Codebook"
+msgstr "Libro de códigos"
+
+msgid "Audit trail"
+msgstr "Registro de auditoría"
+
+msgid "Download evidence matrix"
+msgstr "Descargar matriz de evidencia"
+
+msgid "Download codebook (JSON)"
+msgstr "Descargar libro de códigos (JSON)"
+
+msgid "Download audit trail (JSON)"
+msgstr "Descargar registro de auditoría (JSON)"
+
+msgid "Database"
+msgstr "Base de datos"
+
+msgid "Ready"
+msgstr "Listo"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "LLM"
+msgstr "IA"
+
+msgid "No LLM"
+msgstr "Sin IA"
+
+msgid "Active project"
+msgstr "Proyecto activo"
+
+msgid "Analyst"
+msgstr "Analista"
+
+msgid "Research workflow"
+msgstr "Flujo de investigación"
+
+msgid "No project selected. Go to Corpus to create or activate a project."
+msgstr "No hay proyecto seleccionado. Ve al Corpus para crear o activar uno."
+
+msgid "No LLM adapter is ready. AI suggestions will not be available. Check Ollama or set ANTHROPIC_API_KEY in .env"
+msgstr "No hay adaptador de IA disponible. Las sugerencias automáticas no estarán disponibles. Verifica Ollama o configura ANTHROPIC_API_KEY en .env"
+
+msgid "Main navigation"
+msgstr "Navegación principal"
+
+msgid "Sources"
+msgstr "Fuentes"
+
+msgid "All imported sources in the active corpus. Click a source to preview its segments."
+msgstr "Todas las fuentes importadas en el corpus activo. Haz clic en una fuente para ver sus segmentos."
+
+msgid "No active corpus. Go to Corpus and activate one."
+msgstr "No hay corpus activo. Ve a Corpus y activa uno."
+
+msgid "No sources imported yet."
+msgstr "Aún no se han importado fuentes."
+
+msgid "Import a transcript"
+msgstr "Importar una transcripción"
+
+msgid "Total segments"
+msgstr "Segmentos totales"
+
+msgid "Total words"
+msgstr "Palabras totales"
+
+msgid "Read"
+msgstr "Leer"
+
+msgid "Code"
+msgstr "Código"
+
+msgid "Open in Immersion"
+msgstr "Abrir en Inmersión"
+
+msgid "Open in Coding"
+msgstr "Abrir en Codificación"
+
+msgid "Cross-source comparison"
+msgstr "Comparación entre fuentes"
+
+msgid "Evidence matrix: each cell shows how many times a code appears in a source."
+msgstr "Matriz de evidencia: cada celda muestra cuántas veces aparece un código en una fuente."
+
+msgid "No active project."
+msgstr "No hay proyecto activo."
+
+msgid "No codes yet. Go to Coding to create codes and apply them to segments."
+msgstr "Aún no hay códigos. Ve a Codificación para crear códigos y aplicarlos a los segmentos."
+
+msgid "Open Codebook"
+msgstr "Abrir libro de códigos"
+
+msgid "No sources in the active corpus. Import transcripts or documents first."
+msgstr "No hay fuentes en el corpus activo. Importa transcripciones o documentos primero."
+
+msgid "Speaker filter"
+msgstr "Filtro por hablante"
+
+msgid "Hide codes with no evidence"
+msgstr "Ocultar códigos sin evidencia"
+
+msgid "Export CSV"
+msgstr "Exportar CSV"
+
+msgid "Coded segments"
+msgstr "Segmentos codificados"
+
+msgid "AI-assisted"
+msgstr "Asistido por IA"
+
+msgid "decision(s) — click to view excerpts"
+msgstr "decisión(es) — clic para ver fragmentos"
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "No active corpus."
+msgstr "No hay corpus activo."
+
+msgid "Embedding service not ready. Cannot cluster."
+msgstr "El servicio de embeddings no está listo. No se puede agrupar."
+
+msgid "Clustering complete: %(n)d cluster(s) found."
+msgstr "Agrupamiento completado: %(n)d clúster(es) encontrados."
+
+msgid "No clusters found. Segments may not be embedded yet, or the corpus is too small."
+msgstr "No se encontraron clústeres. Puede que los segmentos no estén embebidos aún, o el corpus es demasiado pequeño."

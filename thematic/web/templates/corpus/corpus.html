@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Corpus" %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📁 {% trans "Corpus management" %}</h1>
+  <p class="subtitle">{% trans "Create projects, import sources, and manage corpora" %}</p>
+</div>
+
+{# ── Tabs ──────────────────────────────────────────────────────────────────── #}
+<div class="tabs" id="corpus-tabs">
+  <button class="tab-btn active" data-tab="projects">{% trans "Projects" %}</button>
+  <button class="tab-btn" data-tab="import">{% trans "Import" %}</button>
+  <button class="tab-btn" data-tab="sources">{% trans "Sources" %}</button>
+</div>
+
+{# ── Projects tab ─────────────────────────────────────────────────────────── #}
+<div class="tab-panel active" id="tab-projects">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+    {# Create project #}
+    <div class="card">
+      <h3 style="margin-bottom:16px;font-size:14px;font-weight:600">
+        {% trans "New project" %}
+      </h3>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        <div class="form-group">
+          <label for="name">{% trans "Project name" %}</label>
+          <input type="text" id="name" name="name"
+                 placeholder="{% trans 'e.g. Prácticas pedagógicas comunitarias' %}">
+        </div>
+        <div class="form-group">
+          <label for="rq">{% trans "Research question" %} ({% trans "optional" %})</label>
+          <textarea id="rq" name="research_question" rows="2"
+                    placeholder="{% trans 'What question guides this analysis?' %}"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">{% trans "Create project" %}</button>
+      </form>
+    </div>
+
+    {# Create corpus #}
+    <div class="card">
+      <h3 style="margin-bottom:16px;font-size:14px;font-weight:600">
+        {% trans "New corpus" %}
+      </h3>
+      {% if active_project_name %}
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          {% trans "Adding to:" %} <strong>{{ active_project_name }}</strong>
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_corpus">
+          <div class="form-group">
+            <label for="corpus_name">{% trans "Corpus name" %}</label>
+            <input type="text" id="corpus_name" name="corpus_name"
+                   placeholder="{% trans 'e.g. Phase 1 — Community interviews' %}">
+          </div>
+          <button type="submit" class="btn btn-primary">{% trans "Create corpus" %}</button>
+        </form>
+      {% else %}
+        <div class="alert alert-warning">{% trans "Select a project first." %}</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# Project list #}
+  {% if projects %}
+    <hr class="divider">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-muted)">
+      {% trans "Your projects" %}
+    </h3>
+    {% for project in projects %}
+      <div class="card" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-weight:600">{{ project.name }}</div>
+          {% if project.research_question %}
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+              {{ project.research_question|truncatechars:80 }}
+            </div>
+          {% endif %}
+        </div>
+        <form method="post" style="margin:0">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="activate">
+          <input type="hidden" name="project_id" value="{{ project.id }}">
+          <button type="submit"
+                  class="btn btn-sm {% if active_project_id == project.id %}btn-success{% else %}btn-secondary{% endif %}">
+            {% if active_project_id == project.id %}✓ {% trans "Active" %}{% else %}{% trans "Activate" %}{% endif %}
+          </button>
+        </form>
+      </div>
+
+      {# Corpora for this project #}
+      {% for corpus in corpora %}
+        {% if corpus.project_id == project.id %}
+          <div style="margin-left:24px;margin-bottom:8px" class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:13px">📂 {{ corpus.name }}</div>
+              <form method="post" style="margin:0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="activate_corpus">
+                <input type="hidden" name="corpus_id" value="{{ corpus.id }}">
+                <button type="submit"
+                        class="btn btn-sm {% if active_corpus_id == corpus.id %}btn-success{% else %}btn-ghost{% endif %}">
+                  {% if active_corpus_id == corpus.id %}✓ {% trans "Active" %}{% else %}{% trans "Use" %}{% endif %}
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info" style="margin-top:16px">
+      {% trans "No projects yet. Create one above." %}
+    </div>
+  {% endif %}
+
+</div>
+
+{# ── Import tab ───────────────────────────────────────────────────────────── #}
+<div class="tab-panel" id="tab-import">
+  {% if not has_project or not has_corpus %}
+    <div class="alert alert-warning">
+      {% trans "You need an active project and corpus before importing. Use the Projects tab." %}
+    </div>
+  {% else %}
+    <div class="card" style="max-width:600px">
+      <h3 style="margin-bottom:16px;font-size:14px;font-weight:600">
+        {% trans "Import transcript or document" %}
+      </h3>
+
+      <form id="upload-form">
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-icon">📂</div>
+          <p><strong>{% trans "Drop file here or click to browse" %}</strong></p>
+          <p style="font-size:11px">
+            {% trans "Supported:" %} .transcript.json · .pdf · .txt · .docx
+          </p>
+          <p class="upload-filename" style="margin-top:8px;color:var(--accent)"></p>
+          <input type="file" accept=".json,.pdf,.txt,.docx" style="display:none">
+        </div>
+
+        <div id="upload-progress" style="display:none;margin:12px 0">
+          <div style="background:var(--bg-input);border-radius:4px;height:6px;overflow:hidden">
+            <div id="progress-bar"
+                 style="height:100%;background:var(--accent);width:0;transition:width 0.2s"></div>
+          </div>
+          <p id="progress-text" style="font-size:11px;color:var(--text-muted);margin-top:4px"></p>
+        </div>
+
+        <div id="upload-result" style="display:none;margin:12px 0"></div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:16px">
+          {% trans "Import" %}
+        </button>
+      </form>
+
+      <a id="refresh-sources" href="{% url 'corpus:sources' %}"
+         class="btn btn-secondary btn-sm" style="margin-top:12px;display:none">
+        {% trans "View imported sources" %} →
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+{# ── Sources tab ──────────────────────────────────────────────────────────── #}
+<div class="tab-panel" id="tab-sources">
+  <a href="{% url 'corpus:sources' %}" class="btn btn-secondary btn-sm" style="margin-bottom:16px">
+    {% trans "Refresh" %}
+  </a>
+  <p style="font-size:12px;color:var(--text-muted)">
+    {% trans "Switch to the Sources page for full segment preview." %}
+    <a href="{% url 'corpus:sources' %}">{% trans "Open" %} →</a>
+  </p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Tab switching
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      panels[i].classList.add('active');
+    });
+  });
+</script>
+<script src="{% static 'js/import.js' %}" defer></script>
+{% endblock %}
