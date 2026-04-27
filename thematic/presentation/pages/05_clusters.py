@@ -51,10 +51,19 @@ with st.sidebar:
     st.caption(f"AI: {llm_tier}")
 
     if st.button(t("clusters_run_btn"), type="primary"):
-        chroma = st.session_state.get("chroma_service")
-        if chroma is None:
-            st.error(t("clusters_no_segments"))
+        # Build the embedding service with the current project_id so the
+        # Chroma WHERE filter matches the embeddings that were stored during import.
+        settings = st.session_state.get("settings")
+        if settings is None:
+            st.error("Settings not initialised.")
         else:
+            from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
+            chroma = ChromaEmbeddingService(
+                persist_path=settings.chroma_path,
+                model_name=settings.embedding_model,
+                device=settings.embedding_device,
+                project_id=active_project_id,
+            )
             with st.spinner(t("clusters_running")):
                 try:
                     session = get_session()
@@ -80,10 +89,14 @@ with st.sidebar:
     st.divider()
     st.caption(t("clusters_embed_note"))
 
-# ── Load clusters from DB ─────────────────────────────────────────────────────
+# ── Load clusters and segments from DB ─────────────────────────────────────────
 session = get_session()
 all_clusters = SqlClusterRepository(session).list_for_project(active_project_id)
+all_project_segs = SqlSegmentRepository(session).list_for_project(active_project_id)
 session.close()
+
+# Map segment IDs to text for quick lookup
+seg_text_map = {s.id: s.text for s in all_project_segs}
 
 show_reviewed = st.checkbox(t("clusters_show_reviewed"), value=False)
 visible = [c for c in all_clusters if not c.is_reviewed or show_reviewed]
@@ -100,11 +113,13 @@ else:
             with col_info:
                 st.markdown(
                     f"**{cluster.label or 'Unlabelled'}**{reviewed_badge}  "
-                    f"— {cluster.size} segments · coherence {cluster.coherence:.0%}"
+                    f"— {len(cluster.segment_ids)} segments · coherence {cluster.coherence_score:.0%}"
                 )
                 with st.expander(t("clusters_excerpts")):
-                    for exc in (cluster.excerpts or [])[:3]:
-                        st.markdown(f"> {exc}")
+                    # Show the first 3 segment texts as excerpts
+                    for sid in cluster.segment_ids[:3]:
+                        text = seg_text_map.get(sid, "Segment text not found.")
+                        st.markdown(f"> {text[:300]}...")
 
             with col_actions:
                 st.markdown("&nbsp;", unsafe_allow_html=True)
@@ -134,12 +149,14 @@ with col_synth:
         elif not reviewed_labels:
             st.warning("No reviewed clusters to synthesise. Review some clusters first.")
         else:
-            reviewed_excerpts = [
-                exc
-                for c in all_clusters
-                if c.is_reviewed
-                for exc in (c.excerpts or [])
-            ]
+            # Use pre-fetched segment map for synthesis
+            reviewed_excerpts = []
+            for c in all_clusters:
+                if c.is_reviewed:
+                    for sid in c.segment_ids[:5]: # Take first 5 segments as representatives
+                        text = seg_text_map.get(sid)
+                        if text:
+                            reviewed_excerpts.append(text)
             with st.spinner(t("clusters_synthesising")):
                 try:
                     result = llm.synthesize_theme(

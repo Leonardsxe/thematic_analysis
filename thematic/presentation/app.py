@@ -91,6 +91,18 @@ def _initialise_services() -> None:
         st.session_state["llm_tier"] = f"Ollama {settings.ollama_model} (Tier 1)"
 
     st.session_state["llm"] = llm
+
+    # ── Embedding service (ChromaDB) ──────────────────────────────────────────
+    from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
+
+    chroma = ChromaEmbeddingService(
+        persist_path=settings.chroma_path,
+        model_name=settings.embedding_model,
+        device=settings.embedding_device,
+        project_id=st.session_state.get("active_project_id", ""),
+    )
+    st.session_state["chroma_service"] = chroma
+
     st.session_state["services_ready"] = True
 
 

@@ -12,7 +12,7 @@ from pathlib import Path
 import tempfile
 
 import streamlit as st
-from thematic.presentation.translations import t
+from thematic.presentation.translations import ts as t
 
 # ── Infrastructure & Domain ──────────────────────────────────────────────────
 from thematic.infrastructure.db.repositories import (
