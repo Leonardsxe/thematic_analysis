@@ -112,14 +112,13 @@ else:
 
             with col_info:
                 st.markdown(
-                    f"**{cluster.label or 'Unlabelled'}**{reviewed_badge}  "
-                    f"— {len(cluster.segment_ids)} segments · coherence {cluster.coherence_score:.0%}"
+                    f"**{cluster.label or t('clusters_unlabelled')}**{reviewed_badge}  "
+                    + t("clusters_stats", n=str(len(cluster.segment_ids)), coherence=f"{cluster.coherence_score:.0%}")
                 )
                 with st.expander(t("clusters_excerpts")):
-                    # Show the first 3 segment texts as excerpts
                     for sid in cluster.segment_ids[:3]:
-                        text = seg_text_map.get(sid, "Segment text not found.")
-                        st.markdown(f"> {text[:300]}...")
+                        text = seg_text_map.get(sid, "—")
+                        st.markdown(f"> {text[:300]}{'…' if len(text) > 300 else ''}")
 
             with col_actions:
                 st.markdown("&nbsp;", unsafe_allow_html=True)
@@ -128,37 +127,70 @@ else:
                     value=cluster.label or "",
                     key=f"label_{cluster.id}",
                     label_visibility="collapsed",
+                    placeholder=t("clusters_label_placeholder"),
+                    disabled=cluster.is_reviewed,
                 )
-                if st.button(t("clusters_promote"), key=f"promote_{cluster.id}"):
-                    final_label = st.session_state.get(f"label_{cluster.id}", cluster.label)
-                    st.success(t("clusters_promoted_ok", label=final_label))
-                if st.button(t("clusters_discard"), key=f"discard_{cluster.id}"):
-                    st.warning(t("clusters_discard"))
+
+                if not cluster.is_reviewed:
+                    if st.button(t("clusters_promote"), key=f"promote_{cluster.id}", type="primary"):
+                        final_label = (
+                            st.session_state.get(f"label_{cluster.id}", "").strip()
+                            or cluster.label
+                            or t("clusters_unlabelled").lower()
+                        )
+                        try:
+                            promo_session = get_session()
+                            SqlClusterRepository(promo_session).promote(cluster.id, final_label)
+                            promo_session.close()
+                            st.success(t("clusters_promoted_ok", label=final_label))
+                            st.rerun()
+                        except Exception as e:
+                            st.error(t("clusters_promote_failed", error=str(e)))
+
+                    if st.button(t("clusters_discard"), key=f"discard_{cluster.id}"):
+                        try:
+                            disc_session = get_session()
+                            SqlClusterRepository(disc_session).discard(cluster.id)
+                            disc_session.close()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(t("clusters_discard_failed", error=str(e)))
+                else:
+                    st.caption(f"✓ {t('clusters_reviewed')}")
 
 # ── Theme synthesis ───────────────────────────────────────────────────────────
 st.divider()
 col_synth, col_info_box = st.columns([1, 2])
 
-reviewed_labels = [c.label for c in all_clusters if c.is_reviewed and c.label]
+# Promoted = reviewed + has a confirmed label
+promoted_clusters = [c for c in all_clusters if c.is_reviewed and c.label]
+reviewed_labels = [c.label for c in promoted_clusters]
 
 with col_synth:
-    if st.button(t("clusters_synthesise"), type="secondary"):
+    if promoted_clusters:
+        st.success(
+            t("clusters_ready_synth", n=str(len(promoted_clusters)))
+            + ", ".join(f"*{c.label}*" for c in promoted_clusters)
+        )
+    else:
+        st.info(t("clusters_need_promote"))
+
+    if st.button(t("clusters_synthesise"), type="secondary", disabled=not reviewed_labels):
         llm = st.session_state.get("llm")
         if llm is None:
             st.error(t("clusters_no_llm"))
         elif not reviewed_labels:
-            st.warning("No reviewed clusters to synthesise. Review some clusters first.")
+            st.warning(t("clusters_no_reviewed"))
         else:
-            # Use pre-fetched segment map for synthesis
             reviewed_excerpts = []
-            for c in all_clusters:
-                if c.is_reviewed:
-                    for sid in c.segment_ids[:5]: # Take first 5 segments as representatives
-                        text = seg_text_map.get(sid)
-                        if text:
-                            reviewed_excerpts.append(text)
+            for c in promoted_clusters:
+                for sid in c.segment_ids[:5]:
+                    text = seg_text_map.get(sid)
+                    if text:
+                        reviewed_excerpts.append(text)
             with st.spinner(t("clusters_synthesising")):
                 try:
+                    lang = st.session_state.get("language", "en")
                     result = llm.synthesize_theme(
                         category_labels=reviewed_labels,
                         supporting_excerpts=reviewed_excerpts,
@@ -167,9 +199,9 @@ with col_synth:
                         ),
                     )
                     st.subheader(t("clusters_proposed_theme"))
-                    st.markdown(f"**{result.get('theme_label', 'Unnamed')}**")
+                    st.markdown(f"**{result.get('theme_label', t('clusters_unnamed'))}**")
                     st.markdown(result.get("narrative", ""))
-                    st.caption(f"Evidence: {result.get('evidence_summary', '')}")
+                    st.caption(t("clusters_evidence", evidence=result.get("evidence_summary", "")))
                     if result.get("gaps"):
                         st.warning(t("clusters_gaps", gaps=result["gaps"]))
                 except Exception as exc:

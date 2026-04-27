@@ -96,10 +96,11 @@ class AnthropicLLMAdapter:
         existing_codes: list[str],
         codebook_context: str,
         project_id: str,
+        language: str = "en",
     ) -> list[dict[str, Any]]:
         """Suggest qualitative codes for one segment."""
         system = P.suggest_codes_system()
-        user = P.suggest_codes_user(segment_text, existing_codes, codebook_context)
+        user = P.suggest_codes_user(segment_text, existing_codes, codebook_context, language=language)
         raw = self._call(system, user, task="suggest_codes", project_id=project_id)
         return self._parse_list(raw)
 
@@ -107,10 +108,11 @@ class AnthropicLLMAdapter:
         self,
         reference_text: str,
         candidate_texts: list[str],
+        language: str = "en",
     ) -> list[dict[str, Any]]:
         """Assess thematic similarity between a reference and candidates."""
         system = P.find_similar_excerpts_system()
-        user = P.find_similar_excerpts_user(reference_text, candidate_texts)
+        user = P.find_similar_excerpts_user(reference_text, candidate_texts, language=language)
         raw = self._call(system, user, task="find_similar_excerpts")
         return self._parse_list(raw)
 
@@ -118,10 +120,11 @@ class AnthropicLLMAdapter:
         self,
         excerpts: list[str],
         existing_categories: list[str],
+        language: str = "en",
     ) -> dict[str, Any]:
         """Propose a category label for a cluster of excerpts."""
         system = P.propose_cluster_label_system()
-        user = P.propose_cluster_label_user(excerpts, existing_categories)
+        user = P.propose_cluster_label_user(excerpts, existing_categories, language=language)
         raw = self._call(system, user, task="propose_cluster_label")
         return self._parse_dict(raw)
 
@@ -130,10 +133,11 @@ class AnthropicLLMAdapter:
         category_labels: list[str],
         supporting_excerpts: list[str],
         project_context: str,
+        language: str = "en",
     ) -> dict[str, Any]:
         """Draft a theme narrative from categories and evidence."""
         system = P.synthesize_theme_system()
-        user = P.synthesize_theme_user(category_labels, supporting_excerpts, project_context)
+        user = P.synthesize_theme_user(category_labels, supporting_excerpts, project_context, language=language)
         raw = self._call(system, user, task="synthesize_theme")
         return self._parse_dict(raw)
 
@@ -141,10 +145,11 @@ class AnthropicLLMAdapter:
         self,
         excerpts_by_source: dict[str, list[str]],
         research_question: str,
+        language: str = "en",
     ) -> list[dict[str, Any]]:
         """Identify divergences across sources."""
         system = P.surface_contradictions_system()
-        user = P.surface_contradictions_user(excerpts_by_source, research_question)
+        user = P.surface_contradictions_user(excerpts_by_source, research_question, language=language)
         raw = self._call(system, user, task="surface_contradictions")
         return self._parse_list(raw)
 

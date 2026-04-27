@@ -13,7 +13,9 @@ from thematic.presentation.translations import ts as t
 from thematic.infrastructure.db.repositories import (
     SqlSourceRepository,
     SqlSegmentRepository,
+    SqlMemoRepository,
 )
+from thematic.domain.entities import Memo
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
 def get_session():
@@ -34,7 +36,8 @@ with st.sidebar:
     st.subheader(t('nav_immersion'))
     
     active_corpus_id = st.session_state.get("active_corpus_id")
-    if not active_corpus_id:
+    active_project_id = st.session_state.get("active_project_id")
+    if not active_corpus_id or not active_project_id:
         st.warning("Please select a project and corpus first in the 'Corpus' page.")
         st.stop()
 
@@ -71,7 +74,23 @@ with st.sidebar:
     st.subheader("Quick memo")
     quick_memo = st.text_area("General impression", height=100, placeholder="Initial thoughts…")
     if st.button("Save memo"):
-        st.info("General memos not implemented in DB yet.")
+        if quick_memo.strip():
+            repo = SqlMemoRepository(session)
+            repo.save(Memo.create(
+                project_id=active_project_id,
+                author=st.session_state.get("analyst", "analyst"),
+                text=quick_memo,
+                entity_type="source",
+                entity_id=active_source.id
+            ))
+            st.success("Memo saved.")
+        else:
+            st.warning("Memo cannot be empty.")
+            
+    # Show source memos
+    source_memos = SqlMemoRepository(session).list_for_entity("source", active_source.id)
+    for m in source_memos:
+        st.info(f"**{m.author}**: {m.text}")
 
 # ── Load real segments ────────────────────────────────────────────────────────
 segments = segment_repo.list_for_source(active_source.id)
@@ -110,8 +129,22 @@ for i, seg in enumerate(visible):
         if st.session_state.get(f"open_memo_{i}"):
             memo_text = st.text_area("Memo for this passage", key=f"memo_txt_{i}", height=70)
             if st.button("Save", key=f"save_memo_{i}"):
-                st.info("Segment memos not implemented in DB yet.")
+                if memo_text.strip():
+                    repo = SqlMemoRepository(session)
+                    repo.save(Memo.create(
+                        project_id=active_project_id,
+                        author=st.session_state.get("analyst", "analyst"),
+                        text=memo_text,
+                        entity_type="segment",
+                        entity_id=seg.id
+                    ))
+                    st.success("Memo saved.")
                 st.session_state[f"open_memo_{i}"] = False
+                st.rerun()
+
+        segment_memos = SqlMemoRepository(session).list_for_entity("segment", seg.id)
+        for m in segment_memos:
+            st.info(f"**{m.author}**: {m.text}")
 
         st.divider()
 

@@ -596,6 +596,28 @@ class SqlClusterRepository:
             row.promoted_to_category_id = category_id
             self._s.commit()
 
+    def update_label(self, cluster_id: str, label: str) -> None:
+        """Update the analyst-confirmed label without marking reviewed."""
+        row = self._s.get(ClusterRow, cluster_id)
+        if row:
+            row.label = label
+            self._s.commit()
+
+    def promote(self, cluster_id: str, label: str) -> None:
+        """Set confirmed label, mark reviewed, no category id yet."""
+        row = self._s.get(ClusterRow, cluster_id)
+        if row:
+            row.label = label
+            row.is_reviewed = True
+            self._s.commit()
+
+    def discard(self, cluster_id: str) -> None:
+        """Mark reviewed without promoting — signals analyst considered and rejected."""
+        row = self._s.get(ClusterRow, cluster_id)
+        if row:
+            row.is_reviewed = True
+            self._s.commit()
+
 
 def _cluster_from_row(r: ClusterRow) -> Cluster:
     return Cluster(

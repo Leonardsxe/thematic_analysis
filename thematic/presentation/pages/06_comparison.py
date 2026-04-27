@@ -131,9 +131,11 @@ with tab_contradict:
 
             with st.spinner(t("comparison_analysing")):
                 try:
+                    lang = st.session_state.get("language", "en")
                     contradictions = llm.surface_contradictions(
                         excerpts_by_source={t_: excerpts_by_source.get(t_, []) for t_ in selected_titles},
                         research_question=research_question,
+                        language=lang,
                     )
                     if not contradictions:
                         st.info(t("comparison_no_contradict"))

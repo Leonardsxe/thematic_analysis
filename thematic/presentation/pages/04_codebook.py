@@ -8,6 +8,8 @@ All data is read from and written to the real database — no demo data.
 
 from __future__ import annotations
 
+import dataclasses
+
 import streamlit as st
 from thematic.presentation.translations import ts as t
 from thematic.infrastructure.db.repositories import SqlCodeRepository
@@ -70,7 +72,13 @@ with tab_codes:
                     if code.exclusion_criteria:
                         st.markdown(f"**{t('codebook_exclusion')}:** {code.exclusion_criteria}")
                     if st.button(t("codebook_deprecate"), key=f"dep_{code.id}"):
-                        st.info("Deprecation not yet implemented in DB.")
+                        try:
+                            deprecated_code = dataclasses.replace(code, is_deprecated=True)
+                            code_repo.save(deprecated_code)
+                            st.success(f"Code '{code.label}' deprecated.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to deprecate code: {e}")
 
     with col_new:
         st.subheader(t("codebook_new_code"))

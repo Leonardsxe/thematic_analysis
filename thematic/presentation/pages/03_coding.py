@@ -21,10 +21,11 @@ from thematic.infrastructure.db.repositories import (
     SqlCodingDecisionRepository,
     SqlAISuggestionRepository,
     SqlModelRunRepository,
+    SqlMemoRepository,
 )
 from thematic.application.coding import ApplyCodeUseCase, SuggestCodesUseCase, CreateCodeUseCase
 from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
-from thematic.domain.entities import Code, Segment
+from thematic.domain.entities import Code, Segment, Memo
 
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
@@ -175,8 +176,22 @@ def render_segment_card(seg: Segment, codes: list[Code], session) -> None:
     if st.session_state.get(f"show_memo_{seg.id}"):
         memo_text = st.text_area("Memo", key=f"memo_text_{seg.id}", height=80)
         if st.button("Save memo", key=f"save_memo_{seg.id}"):
-            st.info("Memos not implemented in DB yet.")
+            if memo_text.strip():
+                repo = SqlMemoRepository(session)
+                repo.save(Memo.create(
+                    project_id=st.session_state["active_project_id"],
+                    author=st.session_state.get("analyst", "analyst"),
+                    text=memo_text,
+                    entity_type="segment",
+                    entity_id=seg.id
+                ))
+                st.success("Memo saved.")
             st.session_state[f"show_memo_{seg.id}"] = False
+            st.rerun()
+
+    memos = SqlMemoRepository(session).list_for_entity("segment", seg.id)
+    for m in memos:
+        st.info(f"**{m.author}**: {m.text}")
 
     st.divider()
 

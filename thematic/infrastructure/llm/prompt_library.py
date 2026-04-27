@@ -20,6 +20,18 @@ from __future__ import annotations
 PROMPT_LIBRARY_VERSION = "1.0.0"
 
 
+def _lang(language: str) -> str:
+    """
+    Appends a language-specific instruction if the target language is not English.
+    This ensures the LLM generates analytical content in the correct language
+    while maintaining the English-based JSON structure.
+    """
+    if language == "es":
+        return "\n\nIMPORTANT: All your analysis, justification, and narrative fields MUST be in Spanish."
+    return ""
+
+
+
 # ─────────────────────────────────────────────
 #  Code suggestion
 # ─────────────────────────────────────────────
@@ -45,6 +57,7 @@ def suggest_codes_user(
     segment_text: str,
     existing_codes: list[str],
     codebook_context: str,
+    language: str = "en",
 ) -> str:
     codes_list = "\n".join(f"- {c}" for c in existing_codes) if existing_codes else "  (none yet)"
     return f"""Analise the following interview excerpt and suggest appropriate qualitative codes.
@@ -74,7 +87,7 @@ Example output:
     "confidence": 0.91,
     "is_new_code": false
   }}
-]"""
+]{_lang(language)}"""
 
 
 # ─────────────────────────────────────────────
@@ -97,6 +110,7 @@ Output ONLY valid JSON."""
 def propose_cluster_label_user(
     excerpts: list[str],
     existing_categories: list[str],
+    language: str = "en",
 ) -> str:
     formatted = "\n\n".join(f"{i+1}. \"{e}\"" for i, e in enumerate(excerpts[:12]))
     cats = "\n".join(f"- {c}" for c in existing_categories) if existing_categories else "  (none yet)"
@@ -115,7 +129,7 @@ Return a single JSON object:
   "rationale"       : string  — analytical explanation of what unites these excerpts
   "contradictions"  : string  — any notable tensions or contradictions within the cluster
   "confidence"      : number  — 0.0 to 1.0
-}}"""
+}}{_lang(language)}"""
 
 
 # ─────────────────────────────────────────────
@@ -141,6 +155,7 @@ def synthesize_theme_user(
     category_labels: list[str],
     supporting_excerpts: list[str],
     project_context: str,
+    language: str = "en",
 ) -> str:
     cats = "\n".join(f"- {c}" for c in category_labels)
     excerpts = "\n\n".join(f'"{e}"' for e in supporting_excerpts[:15])
@@ -161,7 +176,7 @@ Return a JSON object:
   "narrative"        : string — 2-4 sentence analytical narrative (interpretive, not descriptive)
   "evidence_summary" : string — 1-2 sentences citing specific excerpt evidence
   "gaps"             : string — silences, contradictions, or underrepresented cases the analyst should investigate
-}}"""
+}}{_lang(language)}"""
 
 
 # ─────────────────────────────────────────────
@@ -187,6 +202,7 @@ Output ONLY valid JSON."""
 def surface_contradictions_user(
     excerpts_by_source: dict[str, list[str]],
     research_question: str,
+    language: str = "en",
 ) -> str:
     sources_text = ""
     for source_title, excerpts in excerpts_by_source.items():
@@ -211,8 +227,7 @@ Return a JSON array. Each element:
   "investigation_note" : string — what further analysis could contextualise this
 }}
 
-Return an empty array if no meaningful contradictions are found."""
-
+Return an empty array if no meaningful contradictions are found.{_lang(language)}"""
 
 # ─────────────────────────────────────────────
 #  Similar excerpts retrieval assist
@@ -231,6 +246,7 @@ Output ONLY valid JSON."""
 def find_similar_excerpts_user(
     reference_text: str,
     candidate_texts: list[str],
+    language: str = "en",
 ) -> str:
     candidates = "\n".join(
         f"{i}: \"{c}\"" for i, c in enumerate(candidate_texts)
@@ -246,4 +262,4 @@ Return a JSON array, one entry per candidate:
   "index"             : number — same index as the candidate list
   "similarity_reason" : string — specific thematic connection, or "not similar"
   "relevance_score"   : number — 0.0 to 1.0 (0 = unrelated, 1 = essentially the same theme)
-}}"""
+}}{_lang(language)}"""

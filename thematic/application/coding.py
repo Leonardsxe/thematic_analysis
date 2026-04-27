@@ -207,6 +207,7 @@ class SuggestCodesUseCase:
         segment_id: str,
         project_id: str,
         codebook_context: str,
+        language: str = "en",
     ) -> list[AISuggestion]:
         """
         Generate and persist AI suggestions for *segment_id*.
@@ -243,6 +244,7 @@ class SuggestCodesUseCase:
             existing_codes=existing_codes,
             codebook_context=codebook_context,
             project_id=project_id,
+            language=language,
         )
 
         # Build a ModelRun record.
