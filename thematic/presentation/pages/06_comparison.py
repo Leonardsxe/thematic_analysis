@@ -91,7 +91,7 @@ with tab_matrix:
         df = pd.DataFrame(rows).set_index("Code")
         st.dataframe(
             df.style.background_gradient(cmap="Greens", axis=None),
-            use_container_width=True,
+            width="stretch",
         )
         st.caption(t("comparison_matrix_caption"))
 
@@ -189,7 +189,7 @@ with tab_coverage:
         })
 
     if uncoded_rows:
-        st.dataframe(pd.DataFrame(uncoded_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(uncoded_rows), width="stretch", hide_index=True)
 
     if st.button(t("comparison_show_longest")):
         uncoded_list = sorted(

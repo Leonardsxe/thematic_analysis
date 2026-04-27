@@ -106,7 +106,7 @@ with tab_matrix:
                         }
                         for r in matrix.rows
                     ])
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(df, width="stretch")
 
                     csv_str = ExportEvidenceMatrixCsvUseCase().execute(matrix)
                     ts_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
