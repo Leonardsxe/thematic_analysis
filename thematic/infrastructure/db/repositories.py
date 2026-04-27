@@ -198,6 +198,13 @@ class SqlSourceRepository:
             .count()
         )
 
+    def delete(self, source_id: str) -> None:
+        """Delete a source record. Delete its segments first via SqlSegmentRepository."""
+        row = self._s.get(SourceRow, source_id)
+        if row:
+            self._s.delete(row)
+            self._s.commit()
+
 
 def _source_from_row(r: SourceRow) -> Source:
     return Source(
@@ -252,6 +259,10 @@ class SqlSegmentRepository:
         if row:
             row.embedding_id = embedding_id
             self._s.commit()
+
+    def delete_for_source(self, source_id: str) -> None:
+        """Delete all segments belonging to a source (call before deleting the source)."""
+        self._s.query(SegmentRow).filter(SegmentRow.source_id == source_id).delete()
 
     def count_for_project(self, project_id: str) -> int:
         return (
