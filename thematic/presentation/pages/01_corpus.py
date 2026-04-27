@@ -12,7 +12,7 @@ from pathlib import Path
 import tempfile
 
 import streamlit as st
-from thematic.presentation.translations import ts as t
+from thematic.presentation.translations import t
 
 # ── Infrastructure & Domain ──────────────────────────────────────────────────
 from thematic.infrastructure.db.repositories import (
@@ -173,10 +173,12 @@ with tab_import:
                     corpus_repo = SqlCorpusRepository(session)
                     
                     settings = st.session_state.get("settings")
+                    active_project_id = st.session_state.get("active_project_id")
                     embedder = ChromaEmbeddingService(
                         persist_path=settings.chroma_path,
                         model_name=settings.embedding_model,
                         device=settings.embedding_device,
+                        project_id=active_project_id or "",
                     )
                     
                     importer = TranscriptJsonImporter(
@@ -235,16 +237,75 @@ with tab_sources:
             for src in sources:
                 segs = segment_repo.list_for_source(src.id)
                 word_count = sum(len(s.text.split()) for s in segs)
-                
+                embedded_count = sum(1 for s in segs if s.embedding_id)
+
                 with st.expander(f"**{src.title}**"):
-                    col1, col2, col3 = st.columns(3)
-                    col1.write(f"Segments: {len(segs)}")
-                    col2.write(f"Words: {word_count}")
-                    col3.write(f"Language: {src.import_metadata.get('language', 'unknown')}")
-                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Segments", len(segs))
+                    col2.metric("Words", word_count)
+                    col3.metric("Embedded", f"{embedded_count}/{len(segs)}")
+                    col4.write(f"Lang: {src.import_metadata.get('language', '?')}")
+
                     st.caption(f"Source ID: {src.id}")
-                    if st.button("Delete source", key=f"del_{src.id}"):
-                        st.error("Deletion not implemented in UI yet (coming soon).")
+
+                    btn_col1, btn_col2 = st.columns(2)
+
+                    # ── Rebuild embeddings ─────────────────────────────────
+                    with btn_col1:
+                        if st.button("🔄 Rebuild embeddings", key=f"embed_{src.id}",
+                                     help="Re-embed all segments. Required for clustering."):
+                            with st.spinner("Computing embeddings… this may take a minute."):
+                                try:
+                                    settings = st.session_state.get("settings")
+                                    active_project_id = st.session_state.get("active_project_id")
+                                    from thematic.application.ingest import RebuildEmbeddingsUseCase
+                                    embedder = ChromaEmbeddingService(
+                                        persist_path=settings.chroma_path,
+                                        model_name=settings.embedding_model,
+                                        device=settings.embedding_device,
+                                        project_id=active_project_id or "",
+                                    )
+                                    rebuild_session = get_session()
+                                    n = RebuildEmbeddingsUseCase(
+                                        segment_repo=SqlSegmentRepository(rebuild_session),
+                                        embedding_service=embedder,
+                                    ).execute(project_id=active_project_id)
+                                    rebuild_session.commit()
+                                    rebuild_session.close()
+                                    st.success(f"✓ Embedded {n} segments. You can now run clustering.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Embedding failed: {e}")
+
+                    # ── Delete source ──────────────────────────────────────
+                    with btn_col2:
+                        if st.button("🗑️ Delete source", key=f"del_{src.id}",
+                                     type="secondary",
+                                     help="Permanently delete this source and all its segments."):
+                            st.session_state[f"confirm_delete_{src.id}"] = True
+
+                    if st.session_state.get(f"confirm_delete_{src.id}"):
+                        st.warning(
+                            f"Delete **{src.title}** and all its {len(segs)} segments? "
+                            "This cannot be undone."
+                        )
+                        c1, c2 = st.columns(2)
+                        if c1.button("Yes, delete", key=f"confirm_yes_{src.id}", type="primary"):
+                            try:
+                                del_session = get_session()
+                                # Delete segments first (FK constraint)
+                                SqlSegmentRepository(del_session).delete_for_source(src.id)
+                                SqlSourceRepository(del_session).delete(src.id)
+                                del_session.commit()
+                                del_session.close()
+                                st.session_state.pop(f"confirm_delete_{src.id}", None)
+                                st.success(f"Deleted '{src.title}'.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Delete failed: {e}")
+                        if c2.button("Cancel", key=f"confirm_no_{src.id}"):
+                            st.session_state.pop(f"confirm_delete_{src.id}", None)
+                            st.rerun()
         
         session.close()
 
