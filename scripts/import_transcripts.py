@@ -29,6 +29,8 @@ from pathlib import Path
 # Ensure the project root is on sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from pydantic_settings import BaseSettings, SettingsConfigDict  # noqa: E402
+
 
 def main() -> None:
     logging.basicConfig(
@@ -70,8 +72,6 @@ def main() -> None:
     print(f"Embed   : {'NO (deferred)' if args.no_embed else 'YES'}\n")
 
     # ── Wire dependencies ──────────────────────────────────────────────────────
-    from pydantic_settings import BaseSettings, SettingsConfigDict
-
     class Settings(BaseSettings):
         model_config = SettingsConfigDict(env_file=".env", extra="ignore")
         db_url: str = "sqlite:///./thematic.db"

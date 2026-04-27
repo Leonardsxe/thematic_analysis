@@ -319,12 +319,51 @@ class AcceptSuggestionUseCase:
         CodingDecision
             The new decision with ``is_ai=True``.
         """
-        # TODO: load suggestion from repo by id
-        # For now, caller provides suggestion directly — repo lookup TBD.
-        raise NotImplementedError(
-            "AcceptSuggestionUseCase.execute() requires a full suggestion repository "
-            "with get-by-id support. Implement in the next delivery phase."
+        # Load the suggestion from the repo
+        suggestion = self._suggestion_repo.get(suggestion_id)
+        if suggestion is None:
+            raise ValueError(f"Suggestion '{suggestion_id}' not found.")
+
+        if suggestion.status != AISuggestionStatus.PENDING:
+            raise ValueError(
+                f"Suggestion '{suggestion_id}' is already {suggestion.status.value} "
+                "and cannot be accepted again."
+            )
+
+        label = note.strip() if note.strip() else suggestion.suggested_code_label
+
+        # Find or create the code
+        code = self._code_repo.get_by_label(project_id, label)
+        if code is None:
+            if not create_code_if_missing:
+                raise ValueError(
+                    f"Code '{label}' not found in project '{project_id}'. "
+                    "Pass create_code_if_missing=True to create it automatically."
+                )
+            if not project_id:
+                raise ValueError("project_id is required when create_code_if_missing=True.")
+            code = CreateCodeUseCase(self._code_repo).execute(
+                project_id=project_id,
+                label=label,
+                definition=f"AI suggested: {suggestion.justification}",
+            )
+
+        # Create the coding decision flagged as AI-originated
+        decision = CodingDecision(
+            id=new_id(),
+            segment_id=suggestion.segment_id,
+            code_id=code.id,
+            analyst=analyst,
+            note=note,
+            is_ai=True,
+            ai_run_id=suggestion.run_id,
         )
+        self._decision_repo.save(decision)
+
+        # Mark suggestion as accepted so the audit trail is correct
+        self._suggestion_repo.update_status(suggestion_id, AISuggestionStatus.ACCEPTED.value)
+
+        return decision
 
 
 class FindSimilarSegmentsUseCase:

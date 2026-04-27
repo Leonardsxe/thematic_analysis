@@ -16,7 +16,7 @@ import os
 from pathlib import Path
 
 import streamlit as st
-from thematic.presentation.translations import t
+from thematic.presentation.translations import ts as t
 
 # ─────────────────────────────────────────────
 #  Page configuration (must be first Streamlit call)

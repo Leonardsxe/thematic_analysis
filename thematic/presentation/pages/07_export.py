@@ -2,165 +2,178 @@
 07_export.py — Export centre
 ==============================
 
-Export versioned research artefacts:
-  - Evidence matrix (.csv / .xlsx)
-  - Codebook (.json / .md)
-  - Audit trail (.json)
-  - Theme summaries (.md / .txt)
+Exports versioned research artefacts using the real application use cases.
+No demo data — all content is built from the live database.
 """
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 import streamlit as st
 
-st.set_page_config(page_title="Export | Thematic Analysis", layout="wide")
-
-st.title("Export centre")
-st.caption(
-    "All exports include full provenance: source identifier, segment location, "
-    "analyst, model run, and timestamp."
+from thematic.presentation.translations import ts as t
+from thematic.infrastructure.db.repositories import (
+    SqlCodeRepository,
+    SqlCodingDecisionRepository,
+    SqlModelRunRepository,
+    SqlSegmentRepository,
+    SqlSourceRepository,
+)
+from thematic.application.export import (
+    BuildEvidenceMatrixUseCase,
+    ExportEvidenceMatrixCsvUseCase,
+    ExportCodebookJsonUseCase,
+    ExportAuditTrailUseCase,
 )
 
-tab_matrix, tab_codebook, tab_audit = st.tabs(
-    ["Evidence matrix", "Codebook", "Audit trail"]
+
+def get_session():
+    factory = st.session_state.get("db_session_factory")
+    if factory is None:
+        st.error("Database not initialised.")
+        st.stop()
+    return factory()
+
+
+st.set_page_config(
+    page_title=f"{t('nav_export')} | {t('nav_title')}",
+    layout="wide",
 )
+
+active_project_id = st.session_state.get("active_project_id")
+
+if not active_project_id:
+    st.warning(t("export_no_project"))
+    st.stop()
+
+st.title(t("export_title"))
+st.caption(t("export_caption"))
+
+tab_matrix, tab_codebook, tab_audit = st.tabs([
+    t("export_tab_matrix"),
+    t("export_tab_codebook"),
+    t("export_tab_audit"),
+])
 
 # ── Evidence matrix ───────────────────────────────────────────────────────────
 with tab_matrix:
-    st.subheader("Evidence matrix")
-    st.write(
-        "The evidence matrix cross-references codes against sources. "
-        "Each cell contains the excerpts where that code appears in that source."
-    )
+    st.subheader(t("export_matrix_title"))
+    st.write(t("export_matrix_body"))
 
     col_fmt, col_filter = st.columns(2)
     with col_fmt:
-        fmt = st.selectbox("Format", ["CSV", "Excel (.xlsx)", "Markdown"])
+        fmt = st.selectbox(t("export_format"), ["CSV", "Excel (.xlsx)"])
     with col_filter:
         speaker_filter = st.multiselect(
-            "Speaker filter",
+            t("export_speaker_filter"),
             ["INTERVIEWEE", "INTERVIEWER", "UNKNOWN"],
             default=["INTERVIEWEE"],
         )
 
-    include_ai = st.checkbox("Include AI-assisted codings", value=True)
-    include_note = st.checkbox("Include analyst notes", value=True)
+    include_ai    = st.checkbox(t("export_include_ai"), value=True)
+    st.checkbox(t("export_include_notes"), value=True)
 
-    if st.button("Generate evidence matrix"):
-        with st.spinner("Building matrix…"):
-            # Placeholder — replace with ExportEvidenceMatrixUseCase
-            demo_data = [
-                {
-                    "Code": "exclusion_from_spaces",
-                    "Source": "Entrevista_Natalia",
-                    "Speaker": "INTERVIEWEE",
-                    "Time": "45s",
-                    "Excerpt": "Nos quitaron el espacio sin consultarnos…",
-                    "Analyst": "analyst",
-                    "AI": False,
-                },
-                {
-                    "Code": "community_self_organization",
-                    "Source": "Entrevista_Natalia",
-                    "Speaker": "INTERVIEWEE",
-                    "Time": "123s",
-                    "Excerpt": "La comunidad se organizó de todas formas…",
-                    "Analyst": "analyst",
-                    "AI": True,
-                },
-            ]
-            import pandas as pd  # type: ignore[import]
-            df = pd.DataFrame(demo_data)
-            st.dataframe(df, use_container_width=True)
-
-            if fmt == "CSV":
-                csv = df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    "Download CSV",
-                    data=csv,
-                    file_name=f"evidence_matrix_{datetime.now(tz=timezone.utc).strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
+    if st.button(t("export_generate_btn")):
+        with st.spinner(t("export_generating")):
+            try:
+                session = get_session()
+                matrix = BuildEvidenceMatrixUseCase(
+                    decision_repo=SqlCodingDecisionRepository(session),
+                    segment_repo=SqlSegmentRepository(session),
+                    code_repo=SqlCodeRepository(session),
+                    source_repo=SqlSourceRepository(session),
+                ).execute(
+                    active_project_id,
+                    speaker_filter=speaker_filter or None,
+                    include_ai=include_ai,
                 )
+                session.close()
+
+                if not matrix.rows:
+                    st.info(t("export_no_data"))
+                else:
+                    import pandas as pd
+                    df = pd.DataFrame([
+                        {
+                            "Code": r.code_label,
+                            "Source": r.source_title,
+                            "Speaker": r.speaker,
+                            "Start (s)": f"{r.start_s:.1f}" if r.start_s is not None else "",
+                            "Excerpt": r.excerpt,
+                            "Analyst": r.analyst,
+                            "AI": "yes" if r.is_ai else "no",
+                        }
+                        for r in matrix.rows
+                    ])
+                    st.dataframe(df, use_container_width=True)
+
+                    csv_str = ExportEvidenceMatrixCsvUseCase().execute(matrix)
+                    ts_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+                    st.download_button(
+                        t("export_download_csv"),
+                        data=csv_str.encode("utf-8"),
+                        file_name=f"evidence_matrix_{ts_str}.csv",
+                        mime="text/csv",
+                    )
+            except Exception as exc:
+                st.error(t("export_failed", error=str(exc)))
 
 # ── Codebook ──────────────────────────────────────────────────────────────────
 with tab_codebook:
-    st.subheader("Versioned codebook")
-    st.write(
-        "Export the current codebook with all code definitions, inclusion/exclusion "
-        "criteria, examples, and category/theme assignments."
-    )
+    st.subheader(t("export_codebook_title"))
+    st.write(t("export_codebook_body"))
 
-    codebook_fmt = st.selectbox(
-        "Format",
-        ["JSON (machine-readable)", "Markdown (human-readable)"],
-        key="codebook_fmt",
-    )
+    st.selectbox(t("export_codebook_fmt"), ["JSON (machine-readable)"], key="codebook_fmt")
 
-    if st.button("Export codebook"):
-        demo_codebook = {
-            "exported_at": datetime.now(tz=timezone.utc).isoformat(),
-            "schema_version": "1.0",
-            "codes": [
-                {
-                    "label": "exclusion_from_spaces",
-                    "definition": "Participant describes being removed from or denied access to a community or public space.",
-                    "inclusion_criteria": "Must reference a physical space. Must describe removal or denial.",
-                    "exclusion_criteria": "Symbolic or metaphorical exclusion without a physical dimension.",
-                    "examples": ["Nos quitaron el espacio sin consultarnos…"],
-                    "version": 1,
-                }
-            ],
-        }
-        codebook_json = json.dumps(demo_codebook, ensure_ascii=False, indent=2)
-        st.download_button(
-            "Download codebook",
-            data=codebook_json.encode("utf-8"),
-            file_name="codebook.json",
-            mime="application/json",
-        )
-        with st.expander("Preview"):
-            st.json(demo_codebook)
+    if st.button(t("export_codebook_btn")):
+        try:
+            session = get_session()
+            payload = ExportCodebookJsonUseCase(
+                SqlCodeRepository(session)
+            ).execute(active_project_id)
+            session.close()
+
+            import json
+            preview = json.loads(payload)
+            ts_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+            st.download_button(
+                t("export_codebook_btn"),
+                data=payload.encode("utf-8"),
+                file_name=f"codebook_{ts_str}.json",
+                mime="application/json",
+            )
+            with st.expander(t("export_preview")):
+                st.json(preview)
+        except Exception as exc:
+            st.error(t("export_failed", error=str(exc)))
 
 # ── Audit trail ───────────────────────────────────────────────────────────────
 with tab_audit:
-    st.subheader("Audit trail")
-    st.write(
-        "Full log of every coding decision, AI model run, suggestion acceptance or "
-        "rejection, and codebook modification — with analyst, timestamp, and model version."
-    )
+    st.subheader(t("export_audit_title"))
+    st.write(t("export_audit_body"))
 
-    date_range = st.date_input("Date range", value=[], key="audit_dates")
+    st.date_input(t("export_audit_dates"), value=[], key="audit_dates")
 
-    if st.button("Export audit trail"):
-        demo_audit = [
-            {
-                "event": "coding_decision",
-                "segment_id": "seg-001",
-                "code": "exclusion_from_spaces",
-                "analyst": "analyst",
-                "is_ai": False,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
-            },
-            {
-                "event": "ai_suggestion_accepted",
-                "segment_id": "seg-002",
-                "code": "community_self_organization",
-                "model": "mistral:7b",
-                "model_run_id": "run-abc",
-                "analyst": "analyst",
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
-            },
-        ]
-        audit_json = json.dumps(demo_audit, ensure_ascii=False, indent=2)
-        st.download_button(
-            "Download audit trail",
-            data=audit_json.encode("utf-8"),
-            file_name="audit_trail.json",
-            mime="application/json",
-        )
-        with st.expander("Preview"):
-            st.json(demo_audit)
+    if st.button(t("export_audit_btn")):
+        try:
+            session = get_session()
+            payload = ExportAuditTrailUseCase(
+                decision_repo=SqlCodingDecisionRepository(session),
+                run_repo=SqlModelRunRepository(session),
+            ).execute(active_project_id)
+            session.close()
+
+            import json
+            preview = json.loads(payload)
+            ts_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+            st.download_button(
+                t("export_audit_btn"),
+                data=payload.encode("utf-8"),
+                file_name=f"audit_trail_{ts_str}.json",
+                mime="application/json",
+            )
+            with st.expander(t("export_preview")):
+                st.json(preview)
+        except Exception as exc:
+            st.error(t("export_failed", error=str(exc)))

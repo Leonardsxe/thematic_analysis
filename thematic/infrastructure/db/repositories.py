@@ -500,6 +500,10 @@ class SqlAISuggestionRepository:
     def __init__(self, session: Session) -> None:
         self._s = session
 
+    def get(self, suggestion_id: str) -> AISuggestion | None:
+        row = self._s.get(AISuggestionRow, suggestion_id)
+        return _suggestion_from_row(row) if row else None
+
     def save_batch(self, suggestions: list[AISuggestion]) -> None:
         for s in suggestions:
             if not self._s.get(AISuggestionRow, s.id):

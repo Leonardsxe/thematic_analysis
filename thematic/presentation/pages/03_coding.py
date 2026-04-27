@@ -13,7 +13,7 @@ The analyst's primary working environment:
 from __future__ import annotations
 
 import streamlit as st
-from thematic.presentation.translations import t
+from thematic.presentation.translations import ts as t
 from thematic.infrastructure.db.repositories import (
     SqlSourceRepository,
     SqlSegmentRepository,
@@ -22,7 +22,10 @@ from thematic.infrastructure.db.repositories import (
     SqlAISuggestionRepository,
     SqlModelRunRepository,
 )
-from thematic.application.coding import ApplyCodeUseCase, SuggestCodesUseCase
+from thematic.application.coding import ApplyCodeUseCase, SuggestCodesUseCase, CreateCodeUseCase
+from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
+from thematic.domain.entities import Code, Segment
+
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
 def get_session():
@@ -44,7 +47,7 @@ def _get_db():
     return factory() if factory else None
 
 
-def render_segment_card(seg, codes: list[Code], session) -> None:
+def render_segment_card(seg: Segment, codes: list[Code], session) -> None:
     """Render one segment with its coding controls."""
     speaker = seg.speaker
     start = seg.start_s

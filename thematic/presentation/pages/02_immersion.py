@@ -9,7 +9,7 @@ formal coding begins. Supports memos, bookmarks, and audio playback alignment.
 from __future__ import annotations
 
 import streamlit as st
-from thematic.presentation.translations import t
+from thematic.presentation.translations import ts as t
 from thematic.infrastructure.db.repositories import (
     SqlSourceRepository,
     SqlSegmentRepository,
@@ -25,11 +25,9 @@ def get_session():
 
 st.set_page_config(page_title=f"{t('nav_immersion')} | {t('nav_title')}", layout="wide")
 
-st.title("Immersion")
-st.caption(
-    "Read and familiarise yourself with the material before coding. "
-    "Write memos, highlight passages, and note initial impressions."
-)
+st.title(t('nav_immersion'))
+st.caption(t('immersion_caption'))
+
 
 # ── Source selector ───────────────────────────────────────────────────────────
 with st.sidebar:
@@ -55,9 +53,18 @@ with st.sidebar:
     selected_title = st.selectbox(t('nav_corpus'), source_titles)
     active_source = next(s for s in all_sources if s.title == selected_title)
     
-    speaker_filter = st.multiselect(
-        "Show speakers", ["INTERVIEWEE", "INTERVIEWER"], default=["INTERVIEWEE"]
+    speaker_options = {
+        t('coding_interviewee_only'): "INTERVIEWEE",
+        t('coding_all_speakers'): "ALL"
+    }
+    selected_labels = st.multiselect(
+        t('coding_show_speaker'), 
+        options=list(speaker_options.keys()), 
+        default=[t('coding_interviewee_only')]
     )
+    speaker_filter = [speaker_options[l] for l in selected_labels]
+
+
     st.divider()
     show_timestamps = st.checkbox("Show timestamps", value=True)
     st.divider()
@@ -68,7 +75,11 @@ with st.sidebar:
 
 # ── Load real segments ────────────────────────────────────────────────────────
 segments = segment_repo.list_for_source(active_source.id)
-visible = [s for s in segments if s.speaker in speaker_filter]
+if "ALL" in speaker_filter:
+    visible = segments
+else:
+    visible = [s for s in segments if s.speaker == "INTERVIEWEE"]
+
 
 st.subheader(f"{active_source.title} — {len(visible)} segments")
 
