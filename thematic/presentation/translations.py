@@ -17,6 +17,8 @@ from __future__ import annotations
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         # ── Sidebar & navigation ───────────────────────────────────────────
+        "nav_dashboard":    "Dashboard",
+        "no_project_selected": "No project selected",
         "nav_title":     "Thematic Analysis",
         "nav_subtitle":  "Computer-assisted qualitative research",
         "nav_header":    "Navigation",
@@ -233,6 +235,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
 
     "es": {
         # ── Sidebar & navigation ───────────────────────────────────────────
+        "nav_dashboard":    "Inicio",
+        "no_project_selected": "Ningún proyecto seleccionado",
         "nav_title":     "Análisis Temático",
         "nav_subtitle":  "Investigación cualitativa asistida por computadora",
         "nav_header":    "Navegación",

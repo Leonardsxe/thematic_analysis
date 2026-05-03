@@ -25,7 +25,9 @@ from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingSer
 from thematic.infrastructure.importers.transcript_importer import TranscriptJsonImporter
 from thematic.application.ingest import IngestTranscriptUseCase
 from thematic.domain.entities import Project, Corpus
+from thematic.presentation.shared_sidebar import render_sidebar
 
+render_sidebar()
 st.set_page_config(page_title=f"{t('nav_corpus')} | {t('nav_title')}", layout="wide")
 
 # ── Helper: DB Session ───────────────────────────────────────────────────────
@@ -134,7 +136,11 @@ with tab_import:
         ),
     )
 
-    corpus_name = st.text_input("Corpus name", placeholder="Phase 1 interviews")
+    active_corpus_name = st.session_state.get("active_corpus_name", "")
+    if active_corpus_name:
+        st.info(f"Importing into corpus: **{active_corpus_name}**")
+    else:
+        st.warning("No active corpus. Go to the Projects tab to create or activate one.")
 
     include_interviewer = st.checkbox(
         "Include INTERVIEWER turns",

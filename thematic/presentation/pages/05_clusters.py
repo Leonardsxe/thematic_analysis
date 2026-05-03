@@ -17,6 +17,7 @@ from thematic.infrastructure.db.repositories import (
     SqlModelRunRepository,
 )
 from thematic.application.clustering import RunClusteringUseCase, ClusteringConfig
+from thematic.presentation.shared_sidebar import render_sidebar
 
 
 def get_session():
@@ -27,6 +28,7 @@ def get_session():
     return factory()
 
 
+render_sidebar()
 st.set_page_config(
     page_title=f"{t('nav_clusters')} | {t('nav_title')}",
     layout="wide",

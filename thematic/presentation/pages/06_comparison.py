@@ -15,6 +15,7 @@ import pandas as pd
 import streamlit as st
 
 from thematic.presentation.translations import ts as t
+from thematic.presentation.shared_sidebar import render_sidebar
 from thematic.infrastructure.db.repositories import (
     SqlCodeRepository,
     SqlCodingDecisionRepository,
@@ -31,6 +32,7 @@ def get_session():
     return factory()
 
 
+render_sidebar()
 st.set_page_config(
     page_title=f"{t('nav_comparison')} | {t('nav_title')}",
     layout="wide",
@@ -67,13 +69,6 @@ session.close()
 code_map   = {c.id: c.label for c in codes}
 source_map = {s.id: s.title or s.id for s in sources}
 
-# Build pivot: code_label → source_title → count
-pivot: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-for dec in all_decisions:
-    seg = all_segs.get(dec.segment_id)
-    if seg and seg.source_id in source_map:
-        pivot[code_map.get(dec.code_id, "?")][source_map[seg.source_id]] += 1
-
 # ── Code frequency matrix ─────────────────────────────────────────────────────
 with tab_matrix:
     st.subheader(t("comparison_matrix_title"))
@@ -81,6 +76,21 @@ with tab_matrix:
     if not codes or not sources:
         st.info("No codes or sources found. Import transcripts and apply codes first.")
     else:
+        # Speaker filter
+        spk_options = ["All speakers", "INTERVIEWEE only", "INTERVIEWER only"]
+        spk_filter = st.selectbox(t("comparison_speaker_filter"), spk_options)
+
+        # Build pivot with speaker filter applied
+        pivot: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for dec in all_decisions:
+            seg = all_segs.get(dec.segment_id)
+            if seg and seg.source_id in source_map:
+                if spk_filter == "INTERVIEWEE only" and seg.speaker != "INTERVIEWEE":
+                    continue
+                if spk_filter == "INTERVIEWER only" and seg.speaker != "INTERVIEWER":
+                    continue
+                pivot[code_map.get(dec.code_id, "?")][source_map[seg.source_id]] += 1
+
         source_titles = [source_map[s.id] for s in sources]
         rows = []
         for code in codes:
@@ -91,7 +101,7 @@ with tab_matrix:
         df = pd.DataFrame(rows).set_index("Code")
         st.dataframe(
             df.style.background_gradient(cmap="Greens", axis=None),
-            width="stretch",
+            use_container_width=True,
         )
         st.caption(t("comparison_matrix_caption"))
 

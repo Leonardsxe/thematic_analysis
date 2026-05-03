@@ -16,6 +16,7 @@ from thematic.infrastructure.db.repositories import (
     SqlMemoRepository,
 )
 from thematic.domain.entities import Memo
+from thematic.presentation.shared_sidebar import render_sidebar
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
 def get_session():
@@ -25,6 +26,7 @@ def get_session():
         st.stop()
     return factory()
 
+render_sidebar()
 st.set_page_config(page_title=f"{t('nav_immersion')} | {t('nav_title')}", layout="wide")
 
 st.title(t('nav_immersion'))

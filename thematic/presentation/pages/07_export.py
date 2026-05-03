@@ -20,6 +20,7 @@ from thematic.infrastructure.db.repositories import (
     SqlSegmentRepository,
     SqlSourceRepository,
 )
+from thematic.presentation.shared_sidebar import render_sidebar
 from thematic.application.export import (
     BuildEvidenceMatrixUseCase,
     ExportEvidenceMatrixCsvUseCase,
@@ -37,6 +38,7 @@ def get_session():
     return factory()
 
 
+render_sidebar()
 st.set_page_config(
     page_title=f"{t('nav_export')} | {t('nav_title')}",
     layout="wide",

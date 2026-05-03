@@ -26,6 +26,7 @@ from thematic.infrastructure.db.repositories import (
 from thematic.application.coding import ApplyCodeUseCase, SuggestCodesUseCase, CreateCodeUseCase
 from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
 from thematic.domain.entities import Code, Segment, Memo
+from thematic.presentation.shared_sidebar import render_sidebar
 
 
 # ── Infrastructure ────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ def get_session():
     return factory()
 
 st.set_page_config(page_title=f"{t('nav_coding')} | {t('nav_title')}", layout="wide")
+render_sidebar()
 
 
 def _get_llm():
@@ -64,6 +66,18 @@ def render_segment_card(seg: Segment, codes: list[Code], session) -> None:
         unsafe_allow_html=True,
     )
     st.markdown(f"> {text}")
+
+    # ── Already-applied codes ───────────────────────────────────────────
+    decision_repo = SqlCodingDecisionRepository(session)
+    existing_decisions = decision_repo.list_for_segment(seg.id)
+    if existing_decisions:
+        applied_labels = []
+        for dec in existing_decisions:
+            code_obj = next((c for c in codes if c.id == dec.code_id), None)
+            if code_obj:
+                ai_marker = " 🤖" if dec.is_ai else ""
+                applied_labels.append(f"`{code_obj.label}`{ai_marker}")
+        st.markdown("**Applied:** " + " · ".join(applied_labels))
 
     col_codes, col_ai, col_memo = st.columns([2, 1, 1])
 
@@ -96,7 +110,7 @@ def render_segment_card(seg: Segment, codes: list[Code], session) -> None:
                 st.error(f"Failed to apply codes: {e}")
 
     with col_ai:
-        if st.button("AI suggest", key=f"ai_{seg.id}"):
+        if st.button(t('coding_ai_suggest'), key=f"ai_{seg.id}"):
             llm = _get_llm()
             if llm is None:
                 st.error("No LLM configured.")
@@ -113,7 +127,8 @@ def render_segment_card(seg: Segment, codes: list[Code], session) -> None:
                         suggestions = suggest_use_case.execute(
                             segment_id=seg.id,
                             project_id=st.session_state.get("active_project_id", ""),
-                            codebook_context=st.session_state.get("codebook_context", "")
+                            codebook_context=st.session_state.get("codebook_context", ""),
+                            language=st.session_state.get("language", "en"),
                         )
                         st.session_state[f"suggestions_{seg.id}"] = suggestions
                     except Exception as exc:
@@ -216,12 +231,12 @@ st.title(t('nav_coding'))
 
 # Sidebar controls
 with st.sidebar:
-    st.subheader("Session settings")
-    analyst = st.text_input("Analyst name", value=st.session_state.get("analyst", "analyst"))
+    st.subheader(t('coding_session_settings'))
+    analyst = st.text_input(t('coding_analyst_name'), value=st.session_state.get("analyst", "analyst"))
     st.session_state["analyst"] = analyst
 
     codebook_context = st.text_area(
-        "Research question / context",
+        t('coding_research_context'),
         value=st.session_state.get("codebook_context", ""),
         help="Passed to the AI model with every suggestion request.",
         height=80,
@@ -229,7 +244,7 @@ with st.sidebar:
     st.session_state["codebook_context"] = codebook_context
 
     st.divider()
-    st.caption("Source filter")
+    st.caption(t('coding_source_filter'))
     
     all_sources = source_repo.list_for_corpus(active_corpus_id)
     source_titles = [s.title for s in all_sources]
@@ -243,8 +258,8 @@ with st.sidebar:
     active_source = next(s for s in all_sources if s.title == selected_title)
 
     speaker_filter = st.selectbox(
-        "Show speaker",
-        ["INTERVIEWEE only", "All speakers"],
+        t('coding_show_speaker'),
+        [t('coding_interviewee_only'), t('coding_all_speakers')],
         index=0,
     )
 
@@ -252,7 +267,7 @@ with st.sidebar:
 codes = code_repo.list_for_project(active_project_id)
 
 segments = segment_repo.list_for_source(active_source.id)
-if speaker_filter == "INTERVIEWEE only":
+if speaker_filter == t('coding_interviewee_only'):
     visible = [s for s in segments if s.speaker == "INTERVIEWEE"]
 else:
     visible = segments
@@ -260,14 +275,14 @@ else:
 col_main, col_similar = st.columns([3, 1])
 
 with col_main:
-    st.subheader(f"Segments ({len(visible)} shown)")
+    st.subheader(t('coding_segments_shown', n=str(len(visible))))
     for seg in visible:
         render_segment_card(seg, codes, session)
 
 with col_similar:
-    st.subheader("Similar segments")
-    query = st.text_input("Search by text", placeholder="Type a concept…")
-    if query and st.button("Find similar"):
+    st.subheader(t('coding_similar_segments'))
+    query = st.text_input(t('coding_search_placeholder'), placeholder=t('coding_search_placeholder'))
+    if query and st.button(t('coding_find_similar')):
         settings = st.session_state.get("settings")
         embedder = ChromaEmbeddingService(
             persist_path=settings.chroma_path,

@@ -19,6 +19,7 @@ from thematic.infrastructure.db.repositories import (
 )
 from thematic.application.coding import CreateCodeUseCase
 from thematic.domain.entities import Category, Theme
+from thematic.presentation.shared_sidebar import render_sidebar
 
 
 def get_session():
@@ -29,6 +30,7 @@ def get_session():
     return factory()
 
 
+render_sidebar()
 st.set_page_config(page_title=f"{t('nav_codebook')} | {t('nav_title')}", layout="wide")
 
 active_project_id = st.session_state.get("active_project_id")
@@ -141,9 +143,49 @@ with tab_categories:
         if not categories:
             st.info(t("codebook_categories_info"))
         else:
+            # Load all codes for assignment display
+            _code_sess = get_session()
+            _all_codes = SqlCodeRepository(_code_sess).list_for_project(active_project_id)
+            _code_sess.close()
+            _code_by_cat: dict[str, list] = {}
+            for _c in _all_codes:
+                _key = getattr(_c, "category_id", None) or "__none__"
+                _code_by_cat.setdefault(_key, []).append(_c)
+
             for cat in categories:
                 with st.expander(f"**{cat.label}**"):
                     st.markdown(f"**{t('codebook_rationale')}:** {cat.rationale or '—'}")
+                    # Codes in this category
+                    cat_codes = _code_by_cat.get(cat.id, [])
+                    if cat_codes:
+                        st.markdown("**Codes in this category:**")
+                        for _cc in cat_codes:
+                            st.markdown(f"  - `{_cc.label}`")
+                    else:
+                        st.caption("No codes assigned yet — use 'Assign to category' below.")
+
+                    # Assign codes to this category
+                    _unassigned = [_c for _c in _all_codes if not getattr(_c, "category_id", None)]
+                    if _unassigned:
+                        _opts = [_c.label for _c in _unassigned]
+                        _to_assign = st.multiselect(
+                            "Assign codes to this category",
+                            _opts,
+                            key=f"assign_cat_{cat.id}",
+                        )
+                        if _to_assign and st.button("Save assignments", key=f"save_assign_{cat.id}"):
+                            import dataclasses as _dc
+                            _asgn_sess = get_session()
+                            _cat_code_repo = SqlCodeRepository(_asgn_sess)
+                            for _lbl in _to_assign:
+                                _target = next((_c for _c in _all_codes if _c.label == _lbl), None)
+                                if _target:
+                                    _cat_code_repo.save(_dc.replace(_target, category_id=cat.id))
+                            _asgn_sess.commit()
+                            _asgn_sess.close()
+                            st.success(f"Assigned {len(_to_assign)} code(s) to '{cat.label}'.")
+                            st.rerun()
+
                     if cat.theme_id:
                         st.caption(f"→ Assigned to theme `{cat.theme_id[:8]}`")
                     if st.button("🗑️ Delete", key=f"del_cat_{cat.id}"):
