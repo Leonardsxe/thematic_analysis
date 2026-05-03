@@ -629,3 +629,133 @@ def _cluster_from_row(r: ClusterRow) -> Cluster:
         promoted_to_category_id=r.promoted_to_category_id,
         created_at=_from_iso(r.created_at),
     )
+
+
+# ─────────────────────────────────────────────
+#  Category repository
+# ─────────────────────────────────────────────
+
+
+class SqlCategoryRepository:
+    """Persist and retrieve Category entities."""
+
+    def __init__(self, session) -> None:
+        self._s = session
+
+    def save(self, category: "Category") -> None:
+        from thematic.domain.entities import Category as _Cat
+        existing = self._s.get(CategoryRow, category.id)
+        if existing:
+            existing.label = category.label
+            existing.rationale = category.rationale
+            existing.theme_id = category.theme_id
+        else:
+            self._s.add(CategoryRow(
+                id=category.id,
+                project_id=category.project_id,
+                label=category.label,
+                rationale=category.rationale,
+                theme_id=category.theme_id,
+                created_at=category.created_at.isoformat(),
+            ))
+        self._s.commit()
+
+    def get(self, category_id: str) -> "Category | None":
+        row = self._s.get(CategoryRow, category_id)
+        return _category_from_row(row) if row else None
+
+    def list_for_project(self, project_id: str) -> list["Category"]:
+        rows = (
+            self._s.query(CategoryRow)
+            .filter(CategoryRow.project_id == project_id)
+            .order_by(CategoryRow.created_at)
+            .all()
+        )
+        return [_category_from_row(r) for r in rows]
+
+    def delete(self, category_id: str) -> None:
+        row = self._s.get(CategoryRow, category_id)
+        if row:
+            self._s.delete(row)
+            self._s.commit()
+
+
+def _category_from_row(r: CategoryRow) -> "Category":
+    from thematic.domain.entities import Category
+    return Category(
+        id=r.id,
+        project_id=r.project_id,
+        label=r.label,
+        rationale=r.rationale or "",
+        theme_id=r.theme_id,
+        created_at=_from_iso(r.created_at),
+    )
+
+
+# ─────────────────────────────────────────────
+#  Theme repository
+# ─────────────────────────────────────────────
+
+
+class SqlThemeRepository:
+    """Persist and retrieve Theme entities."""
+
+    def __init__(self, session) -> None:
+        self._s = session
+
+    def save(self, theme: "Theme") -> None:
+        existing = self._s.get(ThemeRow, theme.id)
+        if existing:
+            existing.label = theme.label
+            existing.narrative = theme.narrative
+            existing.evidence_summary = theme.evidence_summary
+            existing.is_published = theme.is_published
+        else:
+            self._s.add(ThemeRow(
+                id=theme.id,
+                project_id=theme.project_id,
+                label=theme.label,
+                narrative=theme.narrative,
+                evidence_summary=theme.evidence_summary,
+                is_published=theme.is_published,
+                created_at=theme.created_at.isoformat(),
+            ))
+        self._s.commit()
+
+    def get(self, theme_id: str) -> "Theme | None":
+        row = self._s.get(ThemeRow, theme_id)
+        return _theme_from_row(row) if row else None
+
+    def list_for_project(self, project_id: str) -> list["Theme"]:
+        rows = (
+            self._s.query(ThemeRow)
+            .filter(ThemeRow.project_id == project_id)
+            .order_by(ThemeRow.created_at)
+            .all()
+        )
+        return [_theme_from_row(r) for r in rows]
+
+    def publish(self, theme_id: str) -> None:
+        row = self._s.get(ThemeRow, theme_id)
+        if row:
+            row.is_published = True
+            self._s.commit()
+
+    def delete(self, theme_id: str) -> None:
+        row = self._s.get(ThemeRow, theme_id)
+        if row:
+            self._s.delete(row)
+            self._s.commit()
+
+
+def _theme_from_row(r: ThemeRow) -> "Theme":
+    from thematic.domain.entities import Theme
+    return Theme(
+        id=r.id,
+        project_id=r.project_id,
+        label=r.label,
+        narrative=r.narrative or "",
+        evidence_summary=r.evidence_summary or "",
+        is_published=r.is_published,
+        created_at=_from_iso(r.created_at),
+    )

@@ -198,10 +198,28 @@ with col_synth:
                             "codebook_context", "Community pedagogy research"
                         ),
                     )
+                    # ── Save draft theme to DB ──────────────────────────────
+                    import uuid as _uuid
+                    from thematic.domain.entities import Theme as _Theme
+                    from thematic.infrastructure.db.repositories import SqlThemeRepository as _ThemeRepo
+                    _save_s = get_session()
+                    _new_theme = _Theme(
+                        id=_uuid.uuid4().hex,
+                        project_id=active_project_id,
+                        label=result.get("theme_label", "Unnamed theme"),
+                        narrative=result.get("narrative", ""),
+                        evidence_summary=result.get("evidence_summary", ""),
+                        is_published=False,
+                    )
+                    _ThemeRepo(_save_s).save(_new_theme)
+                    _save_s.commit()
+                    _save_s.close()
+                    # ── Display ─────────────────────────────────────────────
+                    st.success("✓ Theme saved as draft — open Codebook → Themes to review and publish.")
                     st.subheader(t("clusters_proposed_theme"))
-                    st.markdown(f"**{result.get('theme_label', t('clusters_unnamed'))}**")
-                    st.markdown(result.get("narrative", ""))
-                    st.caption(t("clusters_evidence", evidence=result.get("evidence_summary", "")))
+                    st.markdown(f"**{_new_theme.label}**")
+                    st.markdown(_new_theme.narrative)
+                    st.caption(t("clusters_evidence", evidence=_new_theme.evidence_summary))
                     if result.get("gaps"):
                         st.warning(t("clusters_gaps", gaps=result["gaps"]))
                 except Exception as exc:

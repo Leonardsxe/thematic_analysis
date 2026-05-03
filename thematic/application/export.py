@@ -90,8 +90,13 @@ class BuildEvidenceMatrixUseCase:
         decisions = self._decisions.list_for_project(project_id)
         rows: list[EvidenceRow] = []
 
-        # Pre-fetch all codes once for label lookup.
-        code_map = {c.id: c.label for c in self._codes.list_for_project(project_id)}
+        # Pre-fetch all codes once for label and definition lookup.
+        codes_list = self._codes.list_for_project(project_id)
+        code_label_map = {c.id: c.label for c in codes_list}
+        code_def_map   = {c.id: (c.definition or "") for c in codes_list}
+
+        # Track segment index per source for human-readable position
+        source_seg_index: dict[str, int] = {}
 
         for dec in decisions:
             if not include_ai and dec.is_ai:
@@ -106,17 +111,26 @@ class BuildEvidenceMatrixUseCase:
 
             source = self._sources.get(seg.source_id)
             source_title = source.title if source else "unknown"
-            code_label = code_map.get(dec.code_id, "unknown_code")
+            code_label  = code_label_map.get(dec.code_id, "unknown_code")
+            code_def    = code_def_map.get(dec.code_id, "")
+
+            # Segment index per source (1-based, stable within a run)
+            key = seg.source_id
+            source_seg_index[key] = source_seg_index.get(key, 0) + 1
 
             rows.append(EvidenceRow(
                 code_label=code_label,
+                code_definition=code_def,
                 source_title=source_title,
                 speaker=seg.speaker,
+                segment_index=source_seg_index[key],
                 start_s=seg.start_s,
-                excerpt=seg.text[:500],   # cap very long turns in the matrix
+                end_s=getattr(seg, "end_s", None),
+                excerpt=seg.text[:500],
                 analyst=dec.analyst,
-                note=dec.note,
+                note=dec.note or "",
                 is_ai=dec.is_ai,
+                decision_timestamp=dec.created_at.isoformat(),
             ))
 
         matrix = EvidenceMatrix(project_id=project_id, rows=rows)
@@ -149,9 +163,11 @@ class ExportEvidenceMatrixCsvUseCase:
         writer = csv.DictWriter(
             output,
             fieldnames=[
-                "code", "source", "speaker", "start_s",
-                "excerpt", "analyst", "note", "is_ai",
-                "exported_at",
+                "code", "code_definition",
+                "source", "speaker",
+                "segment_index", "start_s", "end_s",
+                "excerpt", "analyst", "note",
+                "is_ai", "decision_timestamp", "exported_at",
             ],
         )
         writer.writeheader()
@@ -159,18 +175,98 @@ class ExportEvidenceMatrixCsvUseCase:
 
         for row in matrix.rows:
             writer.writerow({
-                "code": row.code_label,
-                "source": row.source_title,
-                "speaker": row.speaker or "",
-                "start_s": f"{row.start_s:.1f}" if row.start_s is not None else "",
-                "excerpt": row.excerpt,
-                "analyst": row.analyst,
-                "note": row.note,
-                "is_ai": "yes" if row.is_ai else "no",
-                "exported_at": exported_at,
+                "code":               row.code_label,
+                "code_definition":    row.code_definition,
+                "source":             row.source_title,
+                "speaker":            row.speaker or "",
+                "segment_index":      row.segment_index,
+                "start_s":            f"{row.start_s:.1f}" if row.start_s is not None else "",
+                "end_s":              f"{row.end_s:.1f}"   if row.end_s   is not None else "",
+                "excerpt":            row.excerpt,
+                "analyst":            row.analyst,
+                "note":               row.note or "",
+                "is_ai":              "yes" if row.is_ai else "no",
+                "decision_timestamp": row.decision_timestamp,
+                "exported_at":        exported_at,
             })
 
         return output.getvalue()
+
+
+class ExportCodebookMarkdownUseCase:
+    """
+    Export the codebook as a human-readable Markdown document.
+
+    Suitable for printing, sharing with supervisors, or attaching
+    to a methodology appendix without requiring JSON knowledge.
+    """
+
+    def __init__(self, code_repo: CodeRepository) -> None:
+        self._codes = code_repo
+
+    def execute(self, project_id: str) -> str:
+        codes       = self._codes.list_for_project(project_id)
+        active      = [c for c in codes if not c.is_deprecated]
+        deprecated  = [c for c in codes if c.is_deprecated]
+        exported_at = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+        lines = [
+            "# Codebook",
+            f"",
+            f"**Project:** `{project_id}`  ",
+            f"**Exported:** {exported_at}  ",
+            f"**Codes:** {len(active)} active, {len(deprecated)} deprecated",
+            "",
+            "---",
+            "",
+        ]
+
+        # Group by category
+        by_category: dict[str | None, list] = {}
+        for code in active:
+            by_category.setdefault(code.category_id, []).append(code)
+
+        # Uncategorised first
+        if None in by_category:
+            lines.append("## Uncategorised codes")
+            lines.append("")
+            for code in by_category[None]:
+                lines.extend(_code_to_md(code))
+
+        for cat_id, cat_codes in by_category.items():
+            if cat_id is None:
+                continue
+            lines.append(f"## Category: `{cat_id[:8]}`")
+            lines.append("")
+            for code in cat_codes:
+                lines.extend(_code_to_md(code))
+
+        if deprecated:
+            lines.append("---")
+            lines.append("## Deprecated codes")
+            lines.append("")
+            for code in deprecated:
+                lines.append(f"- ~~`{code.label}`~~ — {code.definition or 'No definition'}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+
+def _code_to_md(code) -> list[str]:
+    lines = [
+        f"### `{code.label}`",
+        "",
+        f"**Definition:** {code.definition or '—'}",
+        "",
+    ]
+    if code.inclusion_criteria:
+        lines += [f"**When to apply:** {code.inclusion_criteria}", ""]
+    if code.exclusion_criteria:
+        lines += [f"**Do not apply when:** {code.exclusion_criteria}", ""]
+    if code.examples:
+        lines += [f"**Examples:** {code.examples}", ""]
+    lines += [f"*Version {code.version} · Created {code.created_at.strftime('%Y-%m-%d')}*", "", "---", ""]
+    return lines
 
 
 class ExportCodebookJsonUseCase:

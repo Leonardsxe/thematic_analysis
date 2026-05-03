@@ -24,6 +24,7 @@ from thematic.application.export import (
     BuildEvidenceMatrixUseCase,
     ExportEvidenceMatrixCsvUseCase,
     ExportCodebookJsonUseCase,
+    ExportCodebookMarkdownUseCase,
     ExportAuditTrailUseCase,
 )
 
@@ -124,27 +125,41 @@ with tab_codebook:
     st.subheader(t("export_codebook_title"))
     st.write(t("export_codebook_body"))
 
-    st.selectbox(t("export_codebook_fmt"), ["JSON (machine-readable)"], key="codebook_fmt")
+    st.selectbox(t("export_codebook_fmt"), ["Markdown (.md) — Human readable", "JSON — Machine readable"], key="codebook_fmt")
 
     if st.button(t("export_codebook_btn")):
         try:
             session = get_session()
-            payload = ExportCodebookJsonUseCase(
-                SqlCodeRepository(session)
-            ).execute(active_project_id)
-            session.close()
-
-            import json
-            preview = json.loads(payload)
             ts_str = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
-            st.download_button(
-                t("export_codebook_btn"),
-                data=payload.encode("utf-8"),
-                file_name=f"codebook_{ts_str}.json",
-                mime="application/json",
-            )
-            with st.expander(t("export_preview")):
-                st.json(preview)
+            fmt = st.session_state.get("codebook_fmt", "")
+
+            if "Markdown" in fmt:
+                payload = ExportCodebookMarkdownUseCase(
+                    SqlCodeRepository(session)
+                ).execute(active_project_id)
+                session.close()
+                st.download_button(
+                    "⬇️ Download Codebook (.md)",
+                    data=payload.encode("utf-8"),
+                    file_name=f"codebook_{ts_str}.md",
+                    mime="text/markdown",
+                )
+                with st.expander(t("export_preview")):
+                    st.markdown(payload)
+            else:
+                payload = ExportCodebookJsonUseCase(
+                    SqlCodeRepository(session)
+                ).execute(active_project_id)
+                session.close()
+                import json as _json
+                st.download_button(
+                    "⬇️ Download Codebook (.json)",
+                    data=payload.encode("utf-8"),
+                    file_name=f"codebook_{ts_str}.json",
+                    mime="application/json",
+                )
+                with st.expander(t("export_preview")):
+                    st.json(_json.loads(payload))
         except Exception as exc:
             st.error(t("export_failed", error=str(exc)))
 

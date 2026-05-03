@@ -689,13 +689,17 @@ class EvidenceRow:
     """One row in an evidence matrix (segment × code intersection)."""
 
     code_label: str
+    code_definition: str
     source_title: str
     speaker: str | None
+    segment_index: int
     start_s: float | None
+    end_s: float | None
     excerpt: str
     analyst: str
     note: str
     is_ai: bool
+    decision_timestamp: str
 
 
 @dataclass(frozen=True)
