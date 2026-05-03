@@ -197,9 +197,48 @@ class TestCodingDecision:
 class TestEvidenceMatrix:
     def _make_matrix(self) -> EvidenceMatrix:
         rows = [
-            EvidenceRow("code_a", "Source 1", "INTERVIEWEE", 10.0, "excerpt 1", "analyst", "", False),
-            EvidenceRow("code_b", "Source 1", "INTERVIEWEE", 20.0, "excerpt 2", "analyst", "", True),
-            EvidenceRow("code_a", "Source 2", "INTERVIEWEE", 5.0, "excerpt 3", "analyst", "", False),
+            EvidenceRow(
+                code_label="code_a",
+                code_definition="Def A",
+                source_title="Source 1",
+                speaker="INTERVIEWEE",
+                segment_index=0,
+                start_s=10.0,
+                end_s=15.0,
+                excerpt="excerpt 1",
+                analyst="analyst",
+                note="",
+                is_ai=False,
+                decision_timestamp="2024-01-01",
+            ),
+            EvidenceRow(
+                code_label="code_b",
+                code_definition="Def B",
+                source_title="Source 1",
+                speaker="INTERVIEWEE",
+                segment_index=1,
+                start_s=20.0,
+                end_s=25.0,
+                excerpt="excerpt 2",
+                analyst="analyst",
+                note="",
+                is_ai=True,
+                decision_timestamp="2024-01-01",
+            ),
+            EvidenceRow(
+                code_label="code_a",
+                code_definition="Def A",
+                source_title="Source 2",
+                speaker="INTERVIEWEE",
+                segment_index=0,
+                start_s=5.0,
+                end_s=10.0,
+                excerpt="excerpt 3",
+                analyst="analyst",
+                note="",
+                is_ai=False,
+                decision_timestamp="2024-01-01",
+            ),
         ]
         return EvidenceMatrix(project_id="proj-1", rows=rows)
 
