@@ -1,9 +1,7 @@
 """apps/core/views.py"""
 from __future__ import annotations
 
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect
-from django.utils.translation import check_for_language, get_language
+from django.http import HttpRequest, HttpResponse
 from django.views import View
 from django.views.generic import TemplateView
 
@@ -25,24 +23,42 @@ class DashboardView(TemplateView):
 class SetLanguageView(View):
     """
     POST /lang/
-    body: language=es  (or 'en')
+    body: language=es|en, next=/current/path
 
-    Stores the chosen language in the session and redirects back.
-    Django's LocaleMiddleware will pick it up on the next request.
+    Sets the language cookie and rewrites the redirect URL to include
+    the correct i18n prefix (e.g. /es/corpus/ ↔ /corpus/).
     """
 
     def post(self, request: HttpRequest) -> HttpResponse:
+        from django.conf import settings
+        from django.shortcuts import redirect
+        from django.utils.translation import check_for_language
+
         lang = request.POST.get("language", "en")
-        next_url = request.POST.get("next", request.META.get("HTTP_REFERER", "/"))
+        next_url = request.POST.get("next", "/")
+
+        if not next_url:
+            next_url = "/"
 
         if check_for_language(lang):
-            request.session["_language"] = lang
-            # Django's LocaleMiddleware reads LANGUAGE_SESSION_KEY
-            from django.utils.translation import LANGUAGE_SESSION_KEY  # type: ignore[attr-defined]
+            # Rewrite URL prefix for i18n_patterns
             try:
-                request.session[LANGUAGE_SESSION_KEY] = lang
-            except AttributeError:
-                # LANGUAGE_SESSION_KEY removed in Django 5 — session key is "_language"
+                from django.urls import translate_url
+                next_url = translate_url(next_url, lang)
+            except Exception:
                 pass
+
+            response = redirect(next_url)
+            response.set_cookie(
+                settings.LANGUAGE_COOKIE_NAME,
+                lang,
+                max_age=settings.LANGUAGE_COOKIE_AGE,
+                path=settings.LANGUAGE_COOKIE_PATH,
+                domain=settings.LANGUAGE_COOKIE_DOMAIN,
+                secure=settings.LANGUAGE_COOKIE_SECURE,
+                httponly=settings.LANGUAGE_COOKIE_HTTPONLY,
+                samesite=settings.LANGUAGE_COOKIE_SAMESITE,
+            )
+            return response
 
         return redirect(next_url)

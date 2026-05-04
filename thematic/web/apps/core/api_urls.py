@@ -18,7 +18,7 @@ urlpatterns = [
     path("segments/similar/", coding_api.FindSimilarView.as_view(), name="api_find_similar"),
     path("coding/excerpts/", coding_api.ExcerptsView.as_view(), name="api_excerpts"),
 
-    # Categories & Themes
+    # Codebook / Categories / Themes
     path("codebook/categories/", coding_api.CreateCategoryView.as_view(), name="api_create_category"),
     path("codebook/assign/", coding_api.AssignCodeToCategoryView.as_view(), name="api_assign_category"),
     path("themes/save/", coding_api.SaveThemeView.as_view(), name="api_save_theme"),

@@ -66,13 +66,14 @@
       </div>
     {% endif %}
 
-    {% for seg in segments %}
+    {% for item in segment_data %}
+      {% with seg=item.segment decisions=item.decisions %}
     <div class="segment-card" id="segment-{{ seg.id }}">
 
       <div class="segment-meta">
         <span class="speaker-badge {{ seg.speaker|lower }}">{{ seg.speaker }}</span>
-        {% if seg.start_time is not None %}
-          <span class="segment-time">{{ seg.start_time|floatformat:1 }}s</span>
+        {% if seg.start_s is not None %}
+          <span class="segment-time">{{ seg.start_s|floatformat:1 }}s</span>
         {% endif %}
         <span class="segment-time" style="margin-left:auto">#{{ forloop.counter }}</span>
       </div>
@@ -81,7 +82,7 @@
 
       {# Applied codes #}
       <div class="applied-codes" style="margin-bottom:8px">
-        {% for decision in seg.decisions %}
+        {% for decision in decisions %}
           <span class="code-chip">{{ decision.code_label }}</span>
         {% endfor %}
       </div>
@@ -132,6 +133,7 @@
       </div>
 
     </div>
+      {% endwith %}
     {% endfor %}
   </div>
 

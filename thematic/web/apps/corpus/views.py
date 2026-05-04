@@ -57,7 +57,7 @@ class CorpusView(TemplateView):
                 if not name:
                     messages.error(request, _("Project name is required."))
                     return redirect("corpus:index")
-                project = Project(name=name, research_question=rq)
+                project = Project.create(name=name, description=rq)
                 repo.save(project)
                 request.session["active_project_id"] = project.id
                 request.session["active_project_name"] = project.name
@@ -90,7 +90,7 @@ class CorpusView(TemplateView):
                     messages.error(request, _("Select a project first."))
                     return redirect("corpus:index")
                 name = request.POST.get("corpus_name", "").strip()
-                corpus = Corpus(project_id=project_id, name=name)
+                corpus = Corpus.create(project_id=project_id, name=name)
                 SqlCorpusRepository(session).save(corpus)
                 request.session["active_corpus_id"] = corpus.id
                 request.session["active_corpus_name"] = corpus.name

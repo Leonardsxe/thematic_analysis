@@ -64,9 +64,9 @@
         <span class="speaker-badge {{ seg.speaker|lower }}" style="display:block;margin-bottom:4px">
           {{ seg.speaker|slice:":1" }}
         </span>
-        {% if seg.start_time is not None %}
+        {% if seg.start_s is not None %}
           <span style="font-size:10px;color:var(--text-disabled)">
-            {{ seg.start_time|floatformat:0 }}s
+            {{ seg.start_s|floatformat:0 }}s
           </span>
         {% endif %}
       </div>

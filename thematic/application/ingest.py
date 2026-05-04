@@ -24,7 +24,6 @@ from thematic.domain.protocols import (
     SegmentRepository,
     SourceRepository,
     TranscriptImporter,
-    DocumentImporter,
 )
 
 logger = logging.getLogger(__name__)
@@ -169,58 +168,6 @@ class IngestTranscriptUseCase:
         succeeded = sum(1 for v in results.values() if v >= 0)
         logger.info("Batch import: %d/%d files succeeded.", succeeded, len(paths))
         return results
-
-
-class IngestDocumentUseCase:
-    """
-    Import a document file (.txt, .docx, .pdf) into a corpus.
-    """
-
-    def __init__(
-        self,
-        corpus_repo: CorpusRepository,
-        source_repo: SourceRepository,
-        segment_repo: SegmentRepository,
-        importer: DocumentImporter,
-        embedding_service: EmbeddingService,
-    ) -> None:
-        self._corpus_repo = corpus_repo
-        self._source_repo = source_repo
-        self._segment_repo = segment_repo
-        self._importer = importer
-        self._embedder = embedding_service
-
-    def execute(
-        self,
-        path: Path,
-        corpus_id: str,
-        *,
-        embed: bool = True,
-    ) -> tuple[Source, int]:
-        if not self._importer.can_import(path):
-            raise ValueError(
-                f"'{path.name}' is not a supported document format. "
-                "Expected a .txt, .docx, or .pdf file."
-            )
-
-        logger.info("Ingesting document: %s", path.name)
-        source, segments = self._importer.import_document(path, corpus_id)
-
-        self._source_repo.save(source)
-        self._segment_repo.save_batch(segments)
-        logger.info("Saved source '%s' with %d segments.", source.title, len(segments))
-
-        if embed and segments:
-            logger.info("Computing embeddings for %d segments …", len(segments))
-            items = [(seg.id, seg.text) for seg in segments]
-            embedding_ids = self._embedder.embed_batch(items)
-
-            for seg, emb_id in zip(segments, embedding_ids):
-                self._segment_repo.update_embedding_id(seg.id, emb_id)
-
-            logger.info("Embeddings stored.")
-
-        return source, len(segments)
 
 
 class RebuildEmbeddingsUseCase:

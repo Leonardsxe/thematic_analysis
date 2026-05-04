@@ -225,21 +225,19 @@ class CreateCategoryView(View):
     def post(self, request):
         data = _json_body(request)
         project_id = request.session.get("active_project_id")
-        label = data.get("label")
-        rationale = data.get("rationale", "")
+        label = data.get("label", "").strip()
+        rationale = data.get("rationale", "").strip()
 
         if not project_id or not label:
-            return JsonResponse({"ok": False, "message": "Missing label or project_id."}, status=400)
+            return JsonResponse({"ok": False, "message": "Missing project_id or label."}, status=400)
 
         try:
             with db_session() as session:
                 from thematic.infrastructure.db.repositories import SqlCategoryRepository
                 from thematic.domain.entities import Category
-                
-                cat = Category.create(project_id, label, rationale)
+                cat = Category.create(project_id=project_id, label=label, rationale=rationale)
                 SqlCategoryRepository(session).save(cat)
-                
-            return JsonResponse({"ok": True, "category_id": str(cat.id)})
+            return JsonResponse({"ok": True, "category_id": cat.id})
         except Exception as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=500)
 
@@ -258,11 +256,12 @@ class AssignCodeToCategoryView(View):
                 from thematic.infrastructure.db.repositories import SqlCodeRepository
                 repo = SqlCodeRepository(session)
                 code = repo.get(code_id)
-                if code:
-                    import dataclasses
-                    new_code = dataclasses.replace(code, category_id=category_id)
-                    repo.save(new_code)
-                    
+                if not code:
+                    return JsonResponse({"ok": False, "message": "Code not found."}, status=404)
+                
+                from dataclasses import replace
+                updated_code = replace(code, category_id=category_id if category_id else None)
+                repo.save(updated_code)
             return JsonResponse({"ok": True})
         except Exception as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=500)
@@ -273,31 +272,31 @@ class SaveThemeView(View):
         data = _json_body(request)
         project_id = request.session.get("active_project_id")
         theme_id = data.get("theme_id")
-        label = data.get("label")
-        narrative = data.get("narrative", "")
-        evidence_summary = data.get("evidence_summary", "")
+        label = data.get("label", "").strip()
+        narrative = data.get("narrative", "").strip()
+        evidence_summary = data.get("evidence_summary", "").strip()
 
         if not project_id or not label:
-            return JsonResponse({"ok": False, "message": "Missing label or project_id."}, status=400)
+            return JsonResponse({"ok": False, "message": "Missing project_id or label."}, status=400)
 
         try:
             with db_session() as session:
                 from thematic.infrastructure.db.repositories import SqlThemeRepository
                 from thematic.domain.entities import Theme
-                import dataclasses
-                
+                from dataclasses import replace
                 repo = SqlThemeRepository(session)
                 if theme_id:
                     theme = repo.get(theme_id)
                     if theme:
-                        theme = dataclasses.replace(theme, label=label, narrative=narrative, evidence_summary=evidence_summary)
-                        repo.save(theme)
+                        theme = replace(theme, label=label, narrative=narrative, evidence_summary=evidence_summary)
+                    else:
+                        return JsonResponse({"ok": False, "message": "Theme not found."}, status=404)
                 else:
-                    theme = Theme.create(project_id, label)
-                    theme = dataclasses.replace(theme, narrative=narrative, evidence_summary=evidence_summary)
-                    repo.save(theme)
+                    theme = Theme.create(project_id=project_id, label=label)
+                    theme = replace(theme, narrative=narrative, evidence_summary=evidence_summary)
                 
-            return JsonResponse({"ok": True, "theme_id": str(theme.id)})
+                repo.save(theme)
+            return JsonResponse({"ok": True, "theme_id": theme.id})
         except Exception as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=500)
 
@@ -307,9 +306,14 @@ class PublishThemeView(View):
         try:
             with db_session() as session:
                 from thematic.infrastructure.db.repositories import SqlThemeRepository
-                SqlThemeRepository(session).publish(theme_id)
+                from dataclasses import replace
+                repo = SqlThemeRepository(session)
+                theme = repo.get(theme_id)
+                if not theme:
+                    return JsonResponse({"ok": False, "message": "Theme not found."}, status=404)
                 
+                theme = replace(theme, is_published=True)
+                repo.save(theme)
             return JsonResponse({"ok": True})
         except Exception as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=500)
-

@@ -47,9 +47,11 @@ class CodingView(TemplateView):
 
             sources = source_repo.list_for_corpus(corpus_id)
             codes = code_repo.list_for_project(project_id)
+            code_map = {c.id: c.label for c in codes}
 
             active_source = None
             segments = []
+            segment_data = []
 
             if sources:
                 # Use selected or default to first
@@ -63,29 +65,23 @@ class CodingView(TemplateView):
                     if speaker_filter == "INTERVIEWEE"
                     else raw_segs
                 )
-
-                all_decisions = decision_repo.list_for_project(project_id)
-                decisions_by_segment = {}
-                for d in all_decisions:
-                    if d.segment_id not in decisions_by_segment:
-                        decisions_by_segment[d.segment_id] = []
-                    code_label = next((c.label for c in codes if c.id == d.code_id), d.code_id)
-                    decisions_by_segment[d.segment_id].append({"code_label": code_label, "is_ai": d.is_ai})
-
-                segment_contexts = []
+                
                 for seg in segments:
-                    segment_contexts.append({
-                        "id": seg.id,
-                        "speaker": seg.speaker,
-                        "start_time": seg.start_s,
-                        "text": seg.text,
-                        "decisions": decisions_by_segment.get(seg.id, []),
+                    seg_decisions = decision_repo.list_for_segment(seg.id)
+                    decisions_enriched = [
+                        {"code_id": d.code_id, "code_label": code_map.get(d.code_id, d.code_id)}
+                        for d in seg_decisions
+                    ]
+                    segment_data.append({
+                        "segment": seg,
+                        "decisions": decisions_enriched
                     })
 
         ctx.update({
             "sources": sources,
             "active_source": active_source,
-            "segments": segment_contexts if sources else [],
+            "segments": segments,
+            "segment_data": segment_data,
             "codes": codes,
             "speaker_filter": speaker_filter,
             "codebook_context": self.request.session.get("codebook_context", ""),
@@ -106,13 +102,13 @@ class CodebookView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         project_id = self.request.session.get("active_project_id")
 
-        codes, categories, themes = [], [], []
+        codes = []
+        categories = []
+        themes = []
         if project_id:
             with db_session() as session:
                 from thematic.infrastructure.db.repositories import (
-                    SqlCodeRepository,
-                    SqlCategoryRepository,
-                    SqlThemeRepository,
+                    SqlCodeRepository, SqlCategoryRepository, SqlThemeRepository
                 )
                 codes = SqlCodeRepository(session).list_for_project(project_id)
                 categories = SqlCategoryRepository(session).list_for_project(project_id)
@@ -121,7 +117,7 @@ class CodebookView(TemplateView):
         ctx.update({
             "codes": codes,
             "categories": categories,
-            "themes": themes,
+            "themes": themes
         })
         return ctx
 

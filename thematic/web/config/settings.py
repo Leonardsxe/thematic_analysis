@@ -29,14 +29,14 @@ class InfraSettings(BaseSettings):
         extra="ignore",
     )
 
-    db_url: str = f"sqlite:///{PROJECT_ROOT / 'thematic.db'}"
-    chroma_path: str = str(PROJECT_ROOT / "chroma_store")
-    embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
+    db_url: str
+    chroma_path: str
+    embedding_model: str
     embedding_device: str | None = None
-    ollama_model: str = "mistral:7b"
-    ollama_host: str = "http://localhost:11434"
+    ollama_model: str
+    ollama_host: str
     anthropic_api_key: str = ""
-    default_analyst: str = "analyst"
+    default_analyst: str
     use_claude: bool = False
 
     # Django-specific
@@ -130,9 +130,28 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Django doesn't manage our SQLAlchemy DB — but it needs *some* DATABASES entry
-# for session middleware to work (even with file-based sessions).
-DATABASES = {}
+# Parse db_url from infra settings to configure Django's DATABASES
+import urllib.parse
+db_info = urllib.parse.urlparse(_infra.db_url)
+
+if db_info.scheme in ("postgresql", "postgres"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": db_info.path.lstrip("/"),
+            "USER": db_info.username or "",
+            "PASSWORD": db_info.password or "",
+            "HOST": db_info.hostname or "",
+            "PORT": db_info.port or "",
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": _infra.db_url.replace("sqlite:///", ""),
+        }
+    }
 
 # ── Messages ───────────────────────────────────────────────────────────────────
 from django.contrib.messages import constants as messages  # noqa: E402

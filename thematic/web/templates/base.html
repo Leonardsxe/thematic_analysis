@@ -105,11 +105,16 @@
     </div>
 
     {# Language toggle #}
-    <div class="lang-toggle">
-      <button class="lang-btn {% if LANGUAGE_CODE == 'en' %}active{% endif %}"
-              data-lang="en" type="button">🇺🇸 EN</button>
-      <button class="lang-btn {% if LANGUAGE_CODE == 'es' %}active{% endif %}"
-              data-lang="es" type="button">🇨🇴 ES</button>
+    <div class="lang-toggle" style="padding: 0 16px; margin-top: 16px;">
+      <select class="form-select" onchange="
+        const form = document.getElementById('lang-form');
+        form.querySelector('[name=language]').value = this.value;
+        form.querySelector('[name=next]').value = window.location.pathname + window.location.search;
+        form.submit();
+      " style="width: 100%; background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); padding: 6px; border-radius: var(--radius-md); font-size: 13px; cursor: pointer;">
+        <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>🇺🇸 English</option>
+        <option value="es" {% if LANGUAGE_CODE == 'es' %}selected{% endif %}>🇨🇴 Español</option>
+      </select>
     </div>
 
     <div class="sidebar-version">v0.2 · Django</div>

@@ -176,6 +176,65 @@ document.querySelectorAll(".find-similar-btn").forEach((btn) => {
   });
 });
 
+// ── Categories & Themes ───────────────────────────────────────────────────────
+
+async function createCategory() {
+  const label = document.getElementById("cat-label").value;
+  const rationale = document.getElementById("cat-rationale").value;
+  if (!label) return;
+
+  const btn = document.querySelector("#create-category-form button");
+  btn.disabled = true;
+
+  try {
+    await api("POST", "/api/codebook/categories/", { label, rationale });
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message, "error");
+    btn.disabled = false;
+  }
+}
+
+document.querySelectorAll(".category-select").forEach((sel) => {
+  sel.addEventListener("change", async (e) => {
+    const codeId = e.target.dataset.codeId;
+    const categoryId = e.target.value;
+    try {
+      await api("POST", "/api/codebook/assign/", { code_id: codeId, category_id: categoryId });
+      showToast("Category assigned", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+});
+
+async function saveTheme() {
+  const label = document.getElementById("theme-label").value;
+  const narrative = document.getElementById("theme-narrative").value;
+  const evidence_summary = document.getElementById("theme-evidence").value;
+  if (!label) return;
+
+  const btn = document.querySelector("#create-theme-form button");
+  btn.disabled = true;
+
+  try {
+    await api("POST", "/api/themes/save/", { label, narrative, evidence_summary });
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message, "error");
+    btn.disabled = false;
+  }
+}
+
+async function publishTheme(themeId) {
+  try {
+    await api("POST", `/api/themes/${themeId}/publish/`);
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function escHtml(s) {
   return String(s)
