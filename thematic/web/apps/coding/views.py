@@ -38,10 +38,12 @@ class CodingView(TemplateView):
                 SqlSourceRepository,
                 SqlSegmentRepository,
                 SqlCodeRepository,
+                SqlCodingDecisionRepository,
             )
             source_repo = SqlSourceRepository(session)
             segment_repo = SqlSegmentRepository(session)
             code_repo = SqlCodeRepository(session)
+            decision_repo = SqlCodingDecisionRepository(session)
 
             sources = source_repo.list_for_corpus(corpus_id)
             codes = code_repo.list_for_project(project_id)
@@ -62,10 +64,28 @@ class CodingView(TemplateView):
                     else raw_segs
                 )
 
+                all_decisions = decision_repo.list_for_project(project_id)
+                decisions_by_segment = {}
+                for d in all_decisions:
+                    if d.segment_id not in decisions_by_segment:
+                        decisions_by_segment[d.segment_id] = []
+                    code_label = next((c.label for c in codes if c.id == d.code_id), d.code_id)
+                    decisions_by_segment[d.segment_id].append({"code_label": code_label, "is_ai": d.is_ai})
+
+                segment_contexts = []
+                for seg in segments:
+                    segment_contexts.append({
+                        "id": seg.id,
+                        "speaker": seg.speaker,
+                        "start_time": seg.start_s,
+                        "text": seg.text,
+                        "decisions": decisions_by_segment.get(seg.id, []),
+                    })
+
         ctx.update({
             "sources": sources,
             "active_source": active_source,
-            "segments": segments,
+            "segments": segment_contexts if sources else [],
             "codes": codes,
             "speaker_filter": speaker_filter,
             "codebook_context": self.request.session.get("codebook_context", ""),
@@ -86,13 +106,23 @@ class CodebookView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         project_id = self.request.session.get("active_project_id")
 
-        codes = []
+        codes, categories, themes = [], [], []
         if project_id:
             with db_session() as session:
-                from thematic.infrastructure.db.repositories import SqlCodeRepository
+                from thematic.infrastructure.db.repositories import (
+                    SqlCodeRepository,
+                    SqlCategoryRepository,
+                    SqlThemeRepository,
+                )
                 codes = SqlCodeRepository(session).list_for_project(project_id)
+                categories = SqlCategoryRepository(session).list_for_project(project_id)
+                themes = SqlThemeRepository(session).list_for_project(project_id)
 
-        ctx["codes"] = codes
+        ctx.update({
+            "codes": codes,
+            "categories": categories,
+            "themes": themes,
+        })
         return ctx
 
     def post(self, request, *args, **kwargs):

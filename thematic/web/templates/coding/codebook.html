@@ -9,6 +9,13 @@
   <p class="subtitle">{% trans "Define and manage your analytical codes" %}</p>
 </div>
 
+<div class="tabs" style="margin-bottom:24px;border-bottom:1px solid var(--border);display:flex;gap:16px">
+  <button class="tab-btn active" style="background:none;border:none;color:var(--text);padding:8px 16px;cursor:pointer;font-weight:600">{% trans "Codes" %}</button>
+  <button class="tab-btn" style="background:none;border:none;color:var(--text-muted);padding:8px 16px;cursor:pointer;font-weight:600">{% trans "Categories" %}</button>
+  <button class="tab-btn" style="background:none;border:none;color:var(--text-muted);padding:8px 16px;cursor:pointer;font-weight:600">{% trans "Themes" %}</button>
+</div>
+
+<div class="tab-panel active">
 <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
 
   {# Code list ─────────────────────────────────────────────────────────────── #}
@@ -68,4 +75,111 @@
   </div>
 
 </div>
+</div>
+
+<div class="tab-panel">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
+    <div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        {{ categories|length }} {% trans "category(ies) in this project" %}
+      </div>
+      {% if categories %}
+        {% for cat in categories %}
+          <div class="card" style="margin-bottom:12px">
+            <h4 style="margin:0 0 8px 0;font-size:14px">{{ cat.label }}</h4>
+            <p style="font-size:13px;color:var(--text-muted);margin:0">{{ cat.rationale }}</p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-info">{% trans "No categories yet." %}</div>
+      {% endif %}
+    </div>
+    <div style="position:sticky;top:24px">
+      <div class="card">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">{% trans "New category" %}</h3>
+        <div class="form-group">
+          <label>{% trans "Label" %}</label>
+          <input type="text" id="cat-label" placeholder="{% trans 'e.g. Systemic Barriers' %}" required>
+        </div>
+        <div class="form-group">
+          <label>{% trans "Rationale" %}</label>
+          <textarea id="cat-rationale" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="createCategory()">{% trans "Create category" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-panel">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
+    <div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        {{ themes|length }} {% trans "theme(s) in this project" %}
+      </div>
+      {% if themes %}
+        {% for theme in themes %}
+          <div class="card" style="margin-bottom:12px">
+            <h4 style="margin:0 0 8px 0;font-size:14px">{{ theme.label }}</h4>
+            <p style="font-size:13px;color:var(--text-muted);margin:0 0 8px 0">{{ theme.narrative }}</p>
+            {% if theme.evidence_summary %}
+            <div style="padding:8px;background:var(--bg-page);border-radius:4px;font-size:12px;color:var(--text-muted)">
+              <strong>{% trans "Evidence:" %}</strong> {{ theme.evidence_summary }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-info">{% trans "No themes yet." %}</div>
+      {% endif %}
+    </div>
+    <div style="position:sticky;top:24px">
+      <div class="card">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:16px">{% trans "New theme" %}</h3>
+        <div class="form-group">
+          <label>{% trans "Label" %}</label>
+          <input type="text" id="theme-label" required>
+        </div>
+        <div class="form-group">
+          <label>{% trans "Narrative" %}</label>
+          <textarea id="theme-narrative" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>{% trans "Evidence Summary" %}</label>
+          <textarea id="theme-evidence" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveTheme()">{% trans "Save theme" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function createCategory() {
+  const label = document.getElementById("cat-label").value;
+  const rationale = document.getElementById("cat-rationale").value;
+  if (!label) return;
+  
+  try {
+    await api("POST", "/api/codebook/categories/", { label, rationale });
+    window.location.reload();
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+async function saveTheme() {
+  const label = document.getElementById("theme-label").value;
+  const narrative = document.getElementById("theme-narrative").value;
+  const evidence_summary = document.getElementById("theme-evidence").value;
+  if (!label) return;
+  
+  try {
+    await api("POST", "/api/themes/save/", { label, narrative, evidence_summary });
+    window.location.reload();
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+</script>
 {% endblock %}

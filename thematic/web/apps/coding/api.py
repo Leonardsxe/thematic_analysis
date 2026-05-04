@@ -219,3 +219,97 @@ class FindSimilarView(View):
             return JsonResponse({"ok": True, "segments": segments})
         except Exception as exc:
             return JsonResponse({"ok": False, "message": str(exc)}, status=500)
+
+
+class CreateCategoryView(View):
+    def post(self, request):
+        data = _json_body(request)
+        project_id = request.session.get("active_project_id")
+        label = data.get("label")
+        rationale = data.get("rationale", "")
+
+        if not project_id or not label:
+            return JsonResponse({"ok": False, "message": "Missing label or project_id."}, status=400)
+
+        try:
+            with db_session() as session:
+                from thematic.infrastructure.db.repositories import SqlCategoryRepository
+                from thematic.domain.entities import Category
+                
+                cat = Category.create(project_id, label, rationale)
+                SqlCategoryRepository(session).save(cat)
+                
+            return JsonResponse({"ok": True, "category_id": str(cat.id)})
+        except Exception as exc:
+            return JsonResponse({"ok": False, "message": str(exc)}, status=500)
+
+
+class AssignCodeToCategoryView(View):
+    def post(self, request):
+        data = _json_body(request)
+        code_id = data.get("code_id")
+        category_id = data.get("category_id")
+
+        if not code_id:
+            return JsonResponse({"ok": False, "message": "Missing code_id."}, status=400)
+
+        try:
+            with db_session() as session:
+                from thematic.infrastructure.db.repositories import SqlCodeRepository
+                repo = SqlCodeRepository(session)
+                code = repo.get(code_id)
+                if code:
+                    import dataclasses
+                    new_code = dataclasses.replace(code, category_id=category_id)
+                    repo.save(new_code)
+                    
+            return JsonResponse({"ok": True})
+        except Exception as exc:
+            return JsonResponse({"ok": False, "message": str(exc)}, status=500)
+
+
+class SaveThemeView(View):
+    def post(self, request):
+        data = _json_body(request)
+        project_id = request.session.get("active_project_id")
+        theme_id = data.get("theme_id")
+        label = data.get("label")
+        narrative = data.get("narrative", "")
+        evidence_summary = data.get("evidence_summary", "")
+
+        if not project_id or not label:
+            return JsonResponse({"ok": False, "message": "Missing label or project_id."}, status=400)
+
+        try:
+            with db_session() as session:
+                from thematic.infrastructure.db.repositories import SqlThemeRepository
+                from thematic.domain.entities import Theme
+                import dataclasses
+                
+                repo = SqlThemeRepository(session)
+                if theme_id:
+                    theme = repo.get(theme_id)
+                    if theme:
+                        theme = dataclasses.replace(theme, label=label, narrative=narrative, evidence_summary=evidence_summary)
+                        repo.save(theme)
+                else:
+                    theme = Theme.create(project_id, label)
+                    theme = dataclasses.replace(theme, narrative=narrative, evidence_summary=evidence_summary)
+                    repo.save(theme)
+                
+            return JsonResponse({"ok": True, "theme_id": str(theme.id)})
+        except Exception as exc:
+            return JsonResponse({"ok": False, "message": str(exc)}, status=500)
+
+
+class PublishThemeView(View):
+    def post(self, request, theme_id):
+        try:
+            with db_session() as session:
+                from thematic.infrastructure.db.repositories import SqlThemeRepository
+                SqlThemeRepository(session).publish(theme_id)
+                
+            return JsonResponse({"ok": True})
+        except Exception as exc:
+            return JsonResponse({"ok": False, "message": str(exc)}, status=500)
+

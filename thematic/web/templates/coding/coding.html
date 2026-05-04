@@ -81,8 +81,8 @@
 
       {# Applied codes #}
       <div class="applied-codes" style="margin-bottom:8px">
-        {% for decision in seg.coding_decisions.all %}
-          <span class="code-chip">{{ decision.code.label }}</span>
+        {% for decision in seg.decisions %}
+          <span class="code-chip">{{ decision.code_label }}</span>
         {% endfor %}
       </div>
 

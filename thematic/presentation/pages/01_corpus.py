@@ -23,7 +23,8 @@ from thematic.infrastructure.db.repositories import (
 )
 from thematic.infrastructure.embeddings.chroma_service import ChromaEmbeddingService
 from thematic.infrastructure.importers.transcript_importer import TranscriptJsonImporter
-from thematic.application.ingest import IngestTranscriptUseCase
+from thematic.infrastructure.importers.document_importer import GenericDocumentImporter
+from thematic.application.ingest import IngestTranscriptUseCase, IngestDocumentUseCase
 from thematic.domain.entities import Project, Corpus
 from thematic.presentation.shared_sidebar import render_sidebar
 
@@ -166,7 +167,12 @@ with tab_import:
         else:
             with st.spinner("Importing and computing embeddings…"):
                 # Save uploaded file to a temp path with the expected extension.
-                with tempfile.NamedTemporaryFile(suffix=".transcript.json", delete=False) as tmp:
+                import os
+                _, ext = os.path.splitext(uploaded.name)
+                # Keep the original extension so the importer knows how to parse it
+                suffix = ext if ext else ".txt"
+
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                     tmp.write(uploaded.getvalue())
                     tmp_path = Path(tmp.name)
 
@@ -187,19 +193,27 @@ with tab_import:
                         project_id=active_project_id or "",
                     )
                     
-                    importer = TranscriptJsonImporter(
-                        min_words=min_words,
-                        include_interviewer=include_interviewer,
-                    )
-                    
-                    # 2. Setup and run use case
-                    use_case = IngestTranscriptUseCase(
-                        corpus_repo=corpus_repo,
-                        source_repo=source_repo,
-                        segment_repo=segment_repo,
-                        importer=importer,
-                        embedding_service=embedder,
-                    )
+                    if "Document" in import_type:
+                        importer = GenericDocumentImporter(min_words=min_words)
+                        use_case = IngestDocumentUseCase(
+                            corpus_repo=corpus_repo,
+                            source_repo=source_repo,
+                            segment_repo=segment_repo,
+                            importer=importer,
+                            embedding_service=embedder,
+                        )
+                    else:
+                        importer = TranscriptJsonImporter(
+                            min_words=min_words,
+                            include_interviewer=include_interviewer,
+                        )
+                        use_case = IngestTranscriptUseCase(
+                            corpus_repo=corpus_repo,
+                            source_repo=source_repo,
+                            segment_repo=segment_repo,
+                            importer=importer,
+                            embedding_service=embedder,
+                        )
                     
                     source, count = use_case.execute(tmp_path, active_corpus_id)
                     session.commit()
