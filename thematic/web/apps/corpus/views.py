@@ -39,6 +39,12 @@ class CorpusView(TemplateView):
             )
         ctx["projects"] = projects
         ctx["corpora"] = corpora
+        # These are needed by the Import tab inside the same corpus.html template.
+        # The template is a single page with JS tabs — ALL context must come from
+        # this view, not from ImportView (which is only used when navigating directly
+        # to /corpus/import/).
+        ctx["has_project"] = bool(self.request.session.get("active_project_id"))
+        ctx["has_corpus"] = bool(self.request.session.get("active_corpus_id"))
         return ctx
 
     def post(self, request: HttpRequest) -> HttpResponse:

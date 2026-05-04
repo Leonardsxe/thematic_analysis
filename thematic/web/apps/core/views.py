@@ -25,40 +25,39 @@ class SetLanguageView(View):
     POST /lang/
     body: language=es|en, next=/current/path
 
-    Sets the language cookie and rewrites the redirect URL to include
-    the correct i18n prefix (e.g. /es/corpus/ ↔ /corpus/).
+    Sets the language cookie and redirects to the language-prefixed
+    equivalent of the current URL so LocaleMiddleware reads the prefix
+    on the next request (required because prefix_default_language=True).
     """
 
     def post(self, request: HttpRequest) -> HttpResponse:
-        from django.conf import settings
+        from django.conf import settings as django_settings
         from django.shortcuts import redirect
         from django.utils.translation import check_for_language
 
         lang = request.POST.get("language", "en")
         next_url = request.POST.get("next", "/")
-
-        if not next_url:
+        if not next_url or next_url == "None":
             next_url = "/"
 
         if check_for_language(lang):
-            # Rewrite URL prefix for i18n_patterns
+            # translate_url rewrites /en/corpus/ → /es/corpus/ (or vice-versa)
             try:
                 from django.urls import translate_url
                 next_url = translate_url(next_url, lang)
             except Exception:
-                pass
+                # Fallback: redirect to language root
+                next_url = f"/{lang}/"
 
             response = redirect(next_url)
+            # Also set cookie so LocaleMiddleware has a fallback
             response.set_cookie(
-                settings.LANGUAGE_COOKIE_NAME,
+                django_settings.LANGUAGE_COOKIE_NAME,  # "django_language"
                 lang,
-                max_age=settings.LANGUAGE_COOKIE_AGE,
-                path=settings.LANGUAGE_COOKIE_PATH,
-                domain=settings.LANGUAGE_COOKIE_DOMAIN,
-                secure=settings.LANGUAGE_COOKIE_SECURE,
-                httponly=settings.LANGUAGE_COOKIE_HTTPONLY,
-                samesite=settings.LANGUAGE_COOKIE_SAMESITE,
+                max_age=365 * 24 * 60 * 60,  # 1 year
+                path="/",
+                samesite="Lax",
             )
             return response
 
-        return redirect(next_url)
+        return redirect(next_url or "/")

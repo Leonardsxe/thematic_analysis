@@ -107,7 +107,7 @@
     {# Language toggle #}
     <div class="lang-toggle" style="padding: 0 16px; margin-top: 16px;">
       <select class="form-select" onchange="
-        const form = document.getElementById('lang-form');
+        var form = document.getElementById('lang-form');
         form.querySelector('[name=language]').value = this.value;
         form.querySelector('[name=next]').value = window.location.pathname + window.location.search;
         form.submit();

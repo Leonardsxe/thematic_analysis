@@ -29,7 +29,7 @@ urlpatterns = i18n_patterns(
     path("coding/", include("thematic.web.apps.coding.urls")),
     path("analysis/", include("thematic.web.apps.analysis.urls")),
     path("export/", include("thematic.web.apps.export.urls")),
-    prefix_default_language=False,  # /  instead of /en/  for English
+    prefix_default_language=True,  # /en/ and /es/ — lets LocaleMiddleware read path prefix
 )
 
 # ── Non-prefixed routes (AJAX, language switch) ───────────────────────────────

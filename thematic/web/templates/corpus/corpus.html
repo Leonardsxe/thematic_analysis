@@ -126,10 +126,17 @@
 
 {# ── Import tab ───────────────────────────────────────────────────────────── #}
 <div class="tab-panel" id="tab-import">
+  {# has_project/has_corpus come from CorpusView context; active_project_id from context_processor #}
   {% if not has_project or not has_corpus %}
     <div class="alert alert-warning">
       {% trans "You need an active project and corpus before importing. Use the Projects tab." %}
     </div>
+    {% if active_project_name and not active_corpus_name %}
+      <p style="font-size:13px;color:var(--text-muted);margin-top:8px">
+        ✓ Project active: <strong>{{ active_project_name }}</strong> —
+        create a corpus above, then click <em>Use</em> to activate it.
+      </p>
+    {% endif %}
   {% else %}
     <div class="card" style="max-width:600px">
       <h3 style="margin-bottom:16px;font-size:14px;font-weight:600">
