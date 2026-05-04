@@ -17,6 +17,7 @@ from pathlib import Path
 
 import streamlit as st
 from thematic.presentation.translations import ts as t
+from thematic.presentation.shared_sidebar import render_sidebar
 
 # ─────────────────────────────────────────────
 #  Page configuration (must be first Streamlit call)
@@ -107,37 +108,8 @@ def _initialise_services() -> None:
 
 
 # ─────────────────────────────────────────────
-#  Sidebar navigation
+#  Sidebar navigation is now imported from shared_sidebar
 # ─────────────────────────────────────────────
-
-
-def _render_sidebar() -> None:
-    with st.sidebar:
-        st.markdown(f"## {t('nav_title')}")
-        st.caption(t('nav_subtitle'))
-        
-        # Language Selector
-        st.divider()
-        current_lang = st.session_state.get("language", "en")
-        lang_options = ["English", "Español"]
-        lang_idx = 0 if current_lang == "en" else 1
-        chosen_lang = st.selectbox(t("lang_label"), lang_options, index=lang_idx)
-        new_lang = "en" if chosen_lang == "English" else "es"
-        if new_lang != current_lang:
-            st.session_state["language"] = new_lang
-            st.rerun()
-
-        st.divider()
-        st.caption(t('nav_header'))
-        st.page_link("pages/01_corpus.py", label=t('nav_corpus'), icon="📂")
-        st.page_link("pages/02_immersion.py", label=t('nav_immersion'), icon="📖")
-        st.page_link("pages/03_coding.py", label=t('nav_coding'), icon="🏷️")
-        st.page_link("pages/04_codebook.py", label=t('nav_codebook'), icon="📋")
-        st.page_link("pages/05_clusters.py", label=t('nav_clusters'), icon="🔵")
-        st.page_link("pages/06_comparison.py", label=t('nav_comparison'), icon="⚖️")
-        st.page_link("pages/07_export.py", label=t('nav_export'), icon="📤")
-        st.divider()
-        st.caption(t('version_tag'))
 
 
 # ─────────────────────────────────────────────
@@ -147,7 +119,7 @@ def _render_sidebar() -> None:
 
 def main() -> None:
     _initialise_services()
-    _render_sidebar()
+    render_sidebar()
 
     st.title(t('main_title'))
     st.caption(t('main_subtitle'))
