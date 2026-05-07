@@ -1,5 +1,7 @@
 """
 02_immersion.py — Immersion workspace
+thematic/presentation/pages/02_immersion.py
+
 =======================================
 
 Reading-first space for familiarising with transcript material before

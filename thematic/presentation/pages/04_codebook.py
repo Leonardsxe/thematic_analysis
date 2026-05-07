@@ -1,5 +1,6 @@
 """
 04_codebook.py — Codebook management
+thematic/presentation/pages/04_codebook.py
 =====================================
 
 Three-tier hierarchy: Code → Category → Theme

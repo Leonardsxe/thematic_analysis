@@ -1,5 +1,7 @@
 """
 03_coding.py — Core coding workspace
+thematic/presentation/pages/03_coding.py
+
 =====================================
 
 The analyst's primary working environment:

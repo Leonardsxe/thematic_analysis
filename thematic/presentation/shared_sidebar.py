@@ -14,17 +14,13 @@ def render_sidebar() -> None:
 
         st.divider()
         current_lang = st.session_state.get("language", "en")
-        c1, c2 = st.columns(2)
-        if c1.button("🇺🇸 EN", use_container_width=True,
-                     type="primary" if current_lang == "en" else "secondary"):
-            if current_lang != "en":
-                st.session_state["language"] = "en"
-                st.rerun()
-        if c2.button("🇨🇴 ES", use_container_width=True,
-                     type="primary" if current_lang == "es" else "secondary"):
-            if current_lang != "es":
-                st.session_state["language"] = "es"
-                st.rerun()
+        lang_options = ["English", "Español"]
+        lang_idx = 0 if current_lang == "en" else 1
+        chosen_lang = st.selectbox(t("lang_label"), lang_options, index=lang_idx)
+        new_lang = "en" if chosen_lang == "English" else "es"
+        if new_lang != current_lang:
+            st.session_state["language"] = new_lang
+            st.rerun()
 
         st.divider()
         project_name = st.session_state.get("active_project_name")
