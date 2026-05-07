@@ -79,9 +79,9 @@
       <div class="card" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <div>
           <div style="font-weight:600">{{ project.name }}</div>
-          {% if project.research_question %}
+          {% if project.description %}
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-              {{ project.research_question|truncatechars:80 }}
+              {{ project.description|truncatechars:80 }}
             </div>
           {% endif %}
         </div>

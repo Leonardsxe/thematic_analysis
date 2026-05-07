@@ -55,15 +55,15 @@ class ImportTranscriptView(View):
 
                 chroma = get_chroma()
                 use_case = IngestTranscriptUseCase(
-                    importer=TranscriptJsonImporter(),
+                    corpus_repo=SqlCorpusRepository(session),
                     source_repo=SqlSourceRepository(session),
                     segment_repo=SqlSegmentRepository(session),
+                    importer=TranscriptJsonImporter(),
                     embedding_service=chroma,
                 )
-                source = use_case.execute(
-                    file_path=tmp_path,
+                source, count = use_case.execute(
+                    path=tmp_path,
                     corpus_id=corpus_id,
-                    project_id=project_id,
                 )
             return JsonResponse({
                 "ok": True,
