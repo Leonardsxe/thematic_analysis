@@ -17,9 +17,9 @@
     <div class="form-group" style="margin:0;min-width:240px">
       <label>{% trans "Source" %}</label>
       <select id="source-selector" onchange="
-        const url = new URL(window.location);
-        url.searchParams.set('source', this.value);
-        window.location = url;
+        const sourceUrl = new URL(window.location);
+        sourceUrl.searchParams.set('source', this.value);
+        window.location = sourceUrl;
       ">
         {% for src in sources %}
           <option value="{{ src.id }}"
@@ -34,9 +34,9 @@
   <div class="form-group" style="margin:0">
     <label>{% trans "Speaker" %}</label>
     <select id="speaker-filter" onchange="
-      const url = new URL(window.location);
-      url.searchParams.set('speaker', this.value);
-      window.location = url;
+      const speakerUrl = new URL(window.location);
+      speakerUrl.searchParams.set('speaker', this.value);
+      window.location = speakerUrl;
     ">
       <option value="ALL" {% if speaker_filter == 'ALL' %}selected{% endif %}>
         {% trans "All speakers" %}

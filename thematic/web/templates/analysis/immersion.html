@@ -3,6 +3,26 @@
 
 {% block title %}{% trans "Immersion" %}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .speaker-bubble {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border-radius: 0 6px 6px 0;
+    border-left: 3px solid var(--border);
+  }
+  .speaker-bubble.interviewee {
+    border-left-color: var(--color-interviewee);
+  }
+  .speaker-bubble.interviewer {
+    border-left-color: var(--color-interviewer);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1>📖 {% trans "Immersion reader" %}</h1>
@@ -17,9 +37,9 @@
   <div class="form-group" style="margin:0;min-width:280px">
     <label>{% trans "Source" %}</label>
     <select onchange="
-      const url = new URL(window.location);
-      url.searchParams.set('source', this.value);
-      window.location = url;
+      const sourceUrl = new URL(window.location);
+      sourceUrl.searchParams.set('source', this.value);
+      window.location = sourceUrl;
     ">
       {% for src in sources %}
         <option value="{{ src.id }}"
@@ -33,9 +53,9 @@
   <div class="form-group" style="margin:0">
     <label>{% trans "Show" %}</label>
     <select onchange="
-      const url = new URL(window.location);
-      url.searchParams.set('speaker', this.value);
-      window.location = url;
+      const speakerUrl = new URL(window.location);
+      speakerUrl.searchParams.set('speaker', this.value);
+      window.location = speakerUrl;
     ">
       <option value="INTERVIEWEE" {% if 'INTERVIEWEE' in speaker_filter %}selected{% endif %}>
         {% trans "Interviewee only" %}
@@ -73,14 +93,7 @@
 
       {# Text block #}
       <div style="flex:1">
-        <div style="font-size:14px;line-height:1.8;color:var(--text);
-                    padding:12px 16px;
-                    background:var(--bg-surface);
-                    border-left:3px solid
-                      {% if seg.speaker == 'INTERVIEWEE' %}var(--color-interviewee)
-                      {% elif seg.speaker == 'INTERVIEWER' %}var(--color-interviewer)
-                      {% else %}var(--border){% endif %};
-                    border-radius:0 6px 6px 0">
+        <div class="speaker-bubble {{ seg.speaker|lower }}">
           {{ seg.text }}
         </div>
       </div>

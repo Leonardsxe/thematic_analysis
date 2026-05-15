@@ -24,6 +24,7 @@ from thematic.domain.protocols import (
     SegmentRepository,
     SourceRepository,
     TranscriptImporter,
+    DocumentImporter,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,6 +155,90 @@ class IngestTranscriptUseCase:
         dict[str, int]
             Mapping of file name → segment count.  Failed files are included
             with a count of -1 and logged as errors.
+        """
+        results: dict[str, int] = {}
+
+        for path in paths:
+            try:
+                _, count = self.execute(path, corpus_id, embed=embed)
+                results[path.name] = count
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Failed to import '%s': %s", path.name, exc)
+                results[path.name] = -1
+
+        succeeded = sum(1 for v in results.values() if v >= 0)
+        logger.info("Batch import: %d/%d files succeeded.", succeeded, len(paths))
+        return results
+
+
+class IngestDocumentUseCase:
+    """
+    Import a document file (.txt, .docx, .pdf) into a corpus, persist all segments,
+    and compute their embeddings.
+    """
+
+    def __init__(
+        self,
+        corpus_repo: CorpusRepository,
+        source_repo: SourceRepository,
+        segment_repo: SegmentRepository,
+        importer: DocumentImporter,
+        embedding_service: EmbeddingService,
+    ) -> None:
+        self._corpus_repo = corpus_repo
+        self._source_repo = source_repo
+        self._segment_repo = segment_repo
+        self._importer = importer
+        self._embedder = embedding_service
+
+    def execute(
+        self,
+        path: Path,
+        corpus_id: str,
+        *,
+        embed: bool = True,
+    ) -> tuple[Source, int]:
+        """
+        Import and optionally embed one document file.
+        """
+        if not self._importer.can_import(path):
+            raise ValueError(
+                f"'{path.name}' is not a supported document format. "
+                "Expected a .txt, .docx, or .pdf file."
+            )
+
+        logger.info("Ingesting document: %s", path.name)
+
+        # 1. Parse file into domain entities.
+        source, segments = self._importer.import_document(path, corpus_id)
+
+        # 2. Persist source and segments.
+        self._source_repo.save(source)
+        self._segment_repo.save_batch(segments)
+        logger.info("Saved source '%s' with %d segments.", source.title, len(segments))
+
+        # 3. Compute embeddings (optional — can be deferred to a batch job).
+        if embed and segments:
+            logger.info("Computing embeddings for %d segments …", len(segments))
+            items = [(seg.id, seg.text) for seg in segments]
+            embedding_ids = self._embedder.embed_batch(items)
+
+            for seg, emb_id in zip(segments, embedding_ids):
+                self._segment_repo.update_embedding_id(seg.id, emb_id)
+
+            logger.info("Embeddings stored.")
+
+        return source, len(segments)
+
+    def execute_batch(
+        self,
+        paths: list[Path],
+        corpus_id: str,
+        *,
+        embed: bool = True,
+    ) -> dict[str, int]:
+        """
+        Import multiple document files into the same corpus.
         """
         results: dict[str, int] = {}
 
